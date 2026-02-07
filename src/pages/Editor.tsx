@@ -1,3 +1,5 @@
+import { TrendingUp } from "lucide-react";
+
 const Editor = () => {
   return (
     <div className="flex flex-col h-screen">
@@ -47,7 +49,21 @@ const Editor = () => {
 
         {/* Right Sidebar */}
         <aside className="w-[300px] min-w-[300px] bg-muted border-l p-4 overflow-y-auto">
-          <h2 className="font-semibold text-sm text-foreground">✨ Craft Coach</h2>
+          <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
+
+          {/* AI Suggestions Card */}
+          <div className="bg-background border border-border rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">Select text to get AI suggestions</p>
+          </div>
+
+          {/* Progress Card */}
+          <div className="bg-background border border-border rounded-lg p-4 mt-4">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-4 w-4 text-foreground" />
+              <p className="text-sm font-medium text-foreground">Progress</p>
+            </div>
+            <p className="text-xs text-muted-foreground">1,247 words today</p>
+          </div>
         </aside>
       </div>
     </div>
