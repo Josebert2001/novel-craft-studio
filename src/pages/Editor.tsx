@@ -22,7 +22,19 @@ const Editor = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <aside className="w-[250px] min-w-[250px] bg-sidebar border-r p-4 overflow-y-auto">
-          <h2 className="font-semibold text-sm text-sidebar-foreground">Chapters</h2>
+          <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
+
+          {/* Chapter 1 - Active */}
+          <div className="p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border">
+            <p className="text-sm font-medium text-foreground">Chapter 1: The Beginning</p>
+            <p className="text-xs text-muted-foreground mt-1">1,247 words</p>
+          </div>
+
+          {/* Chapter 2 - Inactive */}
+          <div className="p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-colors">
+            <p className="text-sm font-medium text-foreground">Chapter 2</p>
+            <p className="text-xs text-muted-foreground mt-1">0 words</p>
+          </div>
         </aside>
 
         {/* Center Editor */}

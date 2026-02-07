@@ -57,6 +57,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        chapter: {
+          active: {
+            DEFAULT: "hsl(var(--chapter-active-bg))",
+            border: "hsl(var(--chapter-active-border))",
+          },
+          inactive: {
+            DEFAULT: "hsl(var(--chapter-inactive-bg))",
+            border: "hsl(var(--chapter-inactive-border))",
+          },
+          hover: {
+            DEFAULT: "hsl(var(--chapter-hover-border))",
+          },
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
