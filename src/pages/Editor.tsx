@@ -38,8 +38,11 @@ const Editor = () => {
         </aside>
 
         {/* Center Editor */}
-        <main className="flex-1 bg-background p-8 overflow-y-auto">
-          <p className="text-muted-foreground">Start writing...</p>
+        <main className="flex-1 bg-background overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-12 py-8 prose prose-lg">
+            <h1 className="text-3xl font-bold mb-6 text-foreground">Chapter 1: The Beginning</h1>
+            <p className="italic text-muted-foreground">Start writing your chapter here...</p>
+          </div>
         </main>
 
         {/* Right Sidebar */}
