@@ -38,6 +38,12 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    --chapter-active-bg: 213 97% 97%;
+    --chapter-active-border: 217 91% 60%;
+    --chapter-inactive-bg: 0 0% 100%;
+    --chapter-inactive-border: 220 13% 91%;
+    --chapter-hover-border: 213 74% 78%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
