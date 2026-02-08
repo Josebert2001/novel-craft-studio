@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Check, FileText, Plus, TrendingUp, X } from "lucide-react";
+import LexicalEditor from "../components/LexicalEditor";
+import KeyboardShortcuts from "../components/KeyboardShortcuts";
 
 interface Chapter {
   id: string;
@@ -18,8 +20,47 @@ const initialChapters: Chapter[] = [
 const Editor = () => {
   const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
   const [currentChapterId, setCurrentChapterId] = useState("ch-1");
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
+
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const handleEditorChange = (content: string) => {
+    setChapters((prev) =>
+      prev.map((ch) =>
+        ch.id === currentChapterId ? { ...ch, content } : ch
+      )
+    );
+
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced save
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      console.log("Auto-saving...");
+      setLastSaved(new Date());
+    }, 2000);
+  };
+
+  useEffect(() => {
+    // Cleanup timeout on unmount
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDeleteChapter = (e: React.MouseEvent, chapterId: string) => {
     e.stopPropagation();
@@ -34,6 +75,14 @@ const Editor = () => {
     }
   };
 
+  const handleWordCountChange = (wordCount: number) => {
+    setChapters((prev) =>
+      prev.map((ch) =>
+        ch.id === currentChapterId ? { ...ch, wordCount } : ch
+      )
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -43,13 +92,20 @@ const Editor = () => {
           <div className="w-px h-6 bg-border" />
           <span className="text-foreground text-sm">My First Novel</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
-            Export
-          </button>
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
-            Save
-          </button>
+        <div className="flex items-center gap-4">
+          {lastSaved && (
+            <span className="text-xs text-gray-500">
+              Saved at {formatTime(lastSaved)}
+            </span>
+          )}
+          <div className="flex items-center gap-2">
+            <button className="px-4 py-2 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
+              Export
+            </button>
+            <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
+              Save
+            </button>
+          </div>
         </div>
       </header>
 
@@ -131,12 +187,12 @@ const Editor = () => {
         </aside>
 
         {/* Center Editor */}
-        <main className="flex-1 bg-background overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-12 py-8 prose prose-lg">
+        <main className="flex-1 bg-background overflow-hidden flex flex-col">
+          <div className="max-w-3xl mx-auto w-full px-12 py-8 flex flex-col flex-1">
             {currentChapter ? (
               <>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{currentChapter.title}</h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6 not-prose">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
                   <span>{currentChapter.wordCount.toLocaleString()} words</span>
                   <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -147,7 +203,14 @@ const Editor = () => {
                     {currentChapter.isComplete ? "Complete" : "Draft"}
                   </span>
                 </div>
-                <p className="italic text-muted-foreground">Start writing your chapter here...</p>
+                <div className="flex-1 overflow-hidden">
+                  <LexicalEditor
+                    initialContent={currentChapter.content}
+                    onChange={handleEditorChange}
+                    onWordCountChange={handleWordCountChange}
+                    placeholder="Start writing your chapter..."
+                  />
+                </div>
               </>
             ) : (
               <p className="text-muted-foreground">Select a chapter to start writing</p>
@@ -174,6 +237,9 @@ const Editor = () => {
               {currentChapter ? `${currentChapter.wordCount.toLocaleString()} words today` : "0 words today"}
             </p>
           </div>
+
+          {/* Keyboard Shortcuts */}
+          <KeyboardShortcuts />
         </aside>
       </div>
     </div>

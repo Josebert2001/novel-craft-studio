@@ -1,11 +1,52 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Link } from "react-router-dom";
+import { BookOpen, Sparkles } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+      <div className="text-center max-w-2xl">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <BookOpen className="h-12 w-12 text-primary" />
+          <h1 className="text-5xl font-bold text-foreground">Novel Craft Studio</h1>
+        </div>
+        
+        <p className="text-xl text-muted-foreground mb-8">
+          A distraction-free writing environment designed for novelists and authors. 
+          Write your story with beautiful formatting, real-time word counts, and smart shortcuts.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          <div className="bg-background border border-border rounded-lg p-4">
+            <BookOpen className="h-8 w-8 text-primary mx-auto mb-2" />
+            <h3 className="font-semibold text-foreground mb-1">Rich Text Editor</h3>
+            <p className="text-sm text-muted-foreground">
+              Markdown shortcuts and intuitive formatting
+            </p>
+          </div>
+
+          <div className="bg-background border border-border rounded-lg p-4">
+            <Sparkles className="h-8 w-8 text-primary mx-auto mb-2" />
+            <h3 className="font-semibold text-foreground mb-1">Smart Suggestions</h3>
+            <p className="text-sm text-muted-foreground">
+              AI-powered writing assistance at your fingertips
+            </p>
+          </div>
+
+          <div className="bg-background border border-border rounded-lg p-4">
+            <BookOpen className="h-8 w-8 text-primary mx-auto mb-2" />
+            <h3 className="font-semibold text-foreground mb-1">Chapter Tracking</h3>
+            <p className="text-sm text-muted-foreground">
+              Organize your work with chapters and progress tracking
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/editor"
+          className="inline-block px-8 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity"
+        >
+          Start Writing
+        </Link>
       </div>
     </div>
   );
