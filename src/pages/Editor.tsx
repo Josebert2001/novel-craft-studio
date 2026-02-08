@@ -1,6 +1,26 @@
+import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 
+interface Chapter {
+  id: string;
+  title: string;
+  wordCount: number;
+  content: string;
+  isComplete: boolean;
+}
+
+const initialChapters: Chapter[] = [
+  { id: "ch-1", title: "Chapter 1: The Beginning", wordCount: 1247, content: "", isComplete: false },
+  { id: "ch-2", title: "Chapter 2: The Journey", wordCount: 543, content: "", isComplete: false },
+  { id: "ch-3", title: "Chapter 3", wordCount: 0, content: "", isComplete: false },
+];
+
 const Editor = () => {
+  const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
+  const [currentChapterId, setCurrentChapterId] = useState("ch-1");
+
+  const currentChapter = chapters.find((ch) => ch.id === currentChapterId)!;
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -26,23 +46,31 @@ const Editor = () => {
         <aside className="w-[250px] min-w-[250px] bg-sidebar border-r p-4 overflow-y-auto">
           <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
 
-          {/* Chapter 1 - Active */}
-          <div className="p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border">
-            <p className="text-sm font-medium text-foreground">Chapter 1: The Beginning</p>
-            <p className="text-xs text-muted-foreground mt-1">1,247 words</p>
-          </div>
-
-          {/* Chapter 2 - Inactive */}
-          <div className="p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-colors">
-            <p className="text-sm font-medium text-foreground">Chapter 2</p>
-            <p className="text-xs text-muted-foreground mt-1">0 words</p>
-          </div>
+          {chapters.map((chapter) => {
+            const isActive = chapter.id === currentChapterId;
+            return (
+              <div
+                key={chapter.id}
+                onClick={() => setCurrentChapterId(chapter.id)}
+                className={
+                  isActive
+                    ? "p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border cursor-pointer"
+                    : "p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-colors"
+                }
+              >
+                <p className="text-sm font-medium text-foreground">{chapter.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {chapter.wordCount.toLocaleString()} words
+                </p>
+              </div>
+            );
+          })}
         </aside>
 
         {/* Center Editor */}
         <main className="flex-1 bg-background overflow-y-auto">
           <div className="max-w-3xl mx-auto px-12 py-8 prose prose-lg">
-            <h1 className="text-3xl font-bold mb-6 text-foreground">Chapter 1: The Beginning</h1>
+            <h1 className="text-3xl font-bold mb-6 text-foreground">{currentChapter.title}</h1>
             <p className="italic text-muted-foreground">Start writing your chapter here...</p>
           </div>
         </main>
@@ -62,7 +90,9 @@ const Editor = () => {
               <TrendingUp className="h-4 w-4 text-foreground" />
               <p className="text-sm font-medium text-foreground">Progress</p>
             </div>
-            <p className="text-xs text-muted-foreground">1,247 words today</p>
+            <p className="text-xs text-muted-foreground">
+              {currentChapter.wordCount.toLocaleString()} words today
+            </p>
           </div>
         </aside>
       </div>
