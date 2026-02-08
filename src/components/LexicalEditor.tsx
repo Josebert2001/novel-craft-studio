@@ -92,6 +92,9 @@ export default function LexicalEditor({
           contentEditable={
             <ContentEditable
               className="lexical-content-editable"
+              spellCheck={true}
+              role="textbox"
+              aria-label="Editor content"
             />
           }
           placeholder={

@@ -119,10 +119,19 @@
   word-wrap: break-word;
   flex: 1;
   overflow-y: auto;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-user-modify: read-write-plaintext-only;
 }
 
 .lexical-content-editable:focus {
   outline: none;
+  background-color: #fafafa;
+}
+
+.lexical-content-editable:empty {
+  color: #999;
 }
 
 .lexical-placeholder {
