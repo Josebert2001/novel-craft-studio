@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Check, FileText, Plus, TrendingUp, X } from "lucide-react";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
+import AiFeedbackPanel from "../components/AiFeedbackPanel";
 
 interface Chapter {
   id: string;
@@ -21,6 +22,7 @@ const Editor = () => {
   const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
   const [currentChapterId, setCurrentChapterId] = useState("ch-1");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [selectedText, setSelectedText] = useState<string>("");
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
@@ -59,6 +61,38 @@ const Editor = () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection) {
+        const text = selection.toString().trim();
+        if (text.length > 10) {
+          setSelectedText(text);
+        } else {
+          setSelectedText("");
+        }
+      }
+    };
+
+    const handleClickOrType = () => {
+      // Clear selection when user clicks elsewhere or starts typing
+      const selection = window.getSelection();
+      if (!selection || selection.toString().length === 0) {
+        setSelectedText("");
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    document.addEventListener("click", handleClickOrType);
+    document.addEventListener("keydown", handleClickOrType);
+
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("click", handleClickOrType);
+      document.removeEventListener("keydown", handleClickOrType);
     };
   }, []);
 
@@ -223,8 +257,8 @@ const Editor = () => {
           <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
 
           {/* AI Suggestions Card */}
-          <div className="bg-background border border-border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">Select text to get AI suggestions</p>
+          <div>
+            <AiFeedbackPanel selectedText={selectedText} />
           </div>
 
           {/* Progress Card */}
