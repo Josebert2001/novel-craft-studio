@@ -14,6 +14,7 @@ import {
 import { ListItemNode, ListNode } from '@lexical/list';
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
 import { AutoLinkNode, LinkNode } from '@lexical/link';
+import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 import { EditorState } from 'lexical';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import ToolbarPlugin from './ToolbarPlugin';
@@ -67,6 +68,7 @@ export default function LexicalEditor({
       CodeHighlightNode,
       AutoLinkNode,
       LinkNode,
+      HorizontalRuleNode,
     ],
     onError: (error: Error) => {
       console.error('Lexical error:', error);
