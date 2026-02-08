@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, TrendingUp } from "lucide-react";
+import { Check, Plus, TrendingUp } from "lucide-react";
 
 interface Chapter {
   id: string;
@@ -70,6 +70,25 @@ const Editor = () => {
               </div>
             );
           })}
+
+          {/* Add Chapter Button */}
+          <button
+            onClick={() => {
+              const newChapter: Chapter = {
+                id: "ch-" + Date.now(),
+                title: "Chapter " + (chapters.length + 1),
+                wordCount: 0,
+                content: "",
+                isComplete: false,
+              };
+              setChapters((prev) => [...prev, newChapter]);
+              setCurrentChapterId(newChapter.id);
+            }}
+            className="w-full p-3 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-200 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            Add Chapter
+          </button>
         </aside>
 
         {/* Center Editor */}
