@@ -41,139 +41,136 @@
   color: #888;
 }
 
-/* Lexical Editor Styles - Book Manuscript Feel */
+/* Lexical Editor Styles - Clean Prose Experience */
 .lexical-editor-container {
   position: relative;
   width: 100%;
-  max-width: 800px;
   margin: 0 auto;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  background-color: transparent;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* Toolbar Styles */
+/* Toolbar - subtle, recedes until needed */
 .lexical-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background-color: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: transparent;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
   position: sticky;
   top: 0;
   z-index: 10;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.lexical-toolbar:hover,
+.lexical-toolbar:focus-within {
+  opacity: 1;
 }
 
 .toolbar-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background-color: #fff;
+  border: none;
+  background-color: transparent;
   cursor: pointer;
-  color: #374151;
+  color: hsl(var(--muted-foreground));
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .toolbar-button:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .toolbar-button-active {
-  background-color: #3b82f6;
-  color: #fff;
-  border-color: #3b82f6;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 .toolbar-button-active:hover {
-  background-color: #2563eb;
-  border-color: #2563eb;
+  background-color: hsl(var(--primary) / 0.9);
 }
 
 .toolbar-divider {
   width: 1px;
-  height: 24px;
-  background-color: #e5e7eb;
-  margin: 0 4px;
+  height: 20px;
+  background-color: hsl(var(--border) / 0.3);
+  margin: 0 2px;
 }
 
 .lexical-content-editable {
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
-  font-size: 18px;
-  line-height: 1.8;
-  padding: 48px 64px;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  font-size: 20px;
+  line-height: 2;
+  letter-spacing: 0.01em;
+  padding: 40px 16px;
   outline: none;
-  color: #333;
-  background-color: #ffffff;
-  resize: vertical;
-  word-wrap: break-word;
+  color: hsl(var(--foreground));
+  background-color: transparent;
   flex: 1;
   overflow-y: auto;
   cursor: text;
   white-space: pre-wrap;
   word-break: break-word;
-  -webkit-user-modify: read-write-plaintext-only;
+  caret-color: hsl(var(--primary));
 }
 
 .lexical-content-editable:focus {
   outline: none;
-  background-color: #fafafa;
-}
-
-.lexical-content-editable:empty {
-  color: #999;
 }
 
 .lexical-placeholder {
   position: absolute;
-  top: 48px;
-  left: 64px;
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
-  font-size: 18px;
-  line-height: 1.8;
-  color: #999;
+  top: 40px;
+  left: 16px;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  font-size: 20px;
+  line-height: 2;
+  color: hsl(var(--muted-foreground) / 0.5);
   pointer-events: none;
+  font-style: italic;
 }
 
 /* Rich Text Formatting */
 .editor-paragraph {
-  margin: 0 0 1em 0;
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
+  margin: 0 0 0.8em 0;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
 }
 
 .editor-heading-h1 {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 2rem 0 1em 0;
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.6em 0;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  letter-spacing: -0.02em;
 }
 
 .editor-heading-h2 {
-  font-size: 28px;
-  font-weight: bold;
-  margin: 1.5rem 0 1em 0;
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
+  font-size: 1.6em;
+  font-weight: 600;
+  margin: 1.2em 0 0.5em 0;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
 }
 
 .editor-heading-h3 {
-  font-size: 24px;
-  font-weight: bold;
-  margin: 1rem 0 0.8em 0;
-  font-family: Georgia, Garamond, 'Times New Roman', serif;
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 1em 0 0.4em 0;
+  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
 }
 
 .editor-text-bold {
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .editor-text-italic {
@@ -182,24 +179,26 @@
 
 .editor-text-underline {
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .editor-link {
-  color: #0066cc;
+  color: hsl(var(--primary));
   text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
 .editor-link:hover {
-  color: #0052a3;
+  opacity: 0.8;
 }
 
 .editor-list-ul,
 .editor-list-ol {
-  margin: 1rem 0;
-  padding-left: 2rem;
+  margin: 0.8em 0;
+  padding-left: 1.5em;
 }
 
 .editor-listitem {
-  margin: 0.5rem 0;
+  margin: 0.4em 0;
 }
