@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { Check, TrendingUp } from "lucide-react";
 
 interface Chapter {
   id: string;
@@ -54,11 +54,16 @@ const Editor = () => {
                 onClick={() => setCurrentChapterId(chapter.id)}
                 className={
                   isActive
-                    ? "p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border cursor-pointer"
-                    : "p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-colors"
+                    ? "p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border cursor-pointer transition-all duration-200"
+                    : "p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-all duration-200"
                 }
               >
-                <p className="text-sm font-medium text-foreground">{chapter.title}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">{chapter.title}</p>
+                  {chapter.isComplete && (
+                    <Check className="h-4 w-4 text-green-600 shrink-0" />
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {chapter.wordCount.toLocaleString()} words
                 </p>
