@@ -89,6 +89,21 @@ const Editor = () => {
             <Plus className="h-4 w-4" />
             Add Chapter
           </button>
+
+          {/* Living Codex Section */}
+          <div className="border-t border-border mt-6 pt-4">
+            <h3 className="font-semibold text-sm text-sidebar-foreground mb-3">Living Codex</h3>
+            <div className="space-y-2">
+              <button className="w-full flex items-center gap-2 p-2 rounded text-sm text-foreground bg-background hover:bg-muted transition-colors cursor-pointer text-left">
+                <span>👤</span>
+                <span>Characters (0)</span>
+              </button>
+              <button className="w-full flex items-center gap-2 p-2 rounded text-sm text-foreground bg-background hover:bg-muted transition-colors cursor-pointer text-left">
+                <span>📍</span>
+                <span>Locations (0)</span>
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* Center Editor */}
