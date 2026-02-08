@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Plus, TrendingUp } from "lucide-react";
+import { Check, FileText, Plus, TrendingUp, X } from "lucide-react";
 
 interface Chapter {
   id: string;
@@ -19,7 +19,20 @@ const Editor = () => {
   const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
   const [currentChapterId, setCurrentChapterId] = useState("ch-1");
 
-  const currentChapter = chapters.find((ch) => ch.id === currentChapterId)!;
+  const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
+
+  const handleDeleteChapter = (e: React.MouseEvent, chapterId: string) => {
+    e.stopPropagation();
+    if (chapters.length <= 1) {
+      alert("You must have at least one chapter");
+      return;
+    }
+    const updated = chapters.filter((ch) => ch.id !== chapterId);
+    setChapters(updated);
+    if (currentChapterId === chapterId) {
+      setCurrentChapterId(updated[0].id);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -52,19 +65,30 @@ const Editor = () => {
               <div
                 key={chapter.id}
                 onClick={() => setCurrentChapterId(chapter.id)}
-                className={
+                className={`group p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
                   isActive
-                    ? "p-3 rounded-lg mb-2 border-2 bg-chapter-active border-chapter-active-border cursor-pointer transition-all duration-200"
-                    : "p-3 rounded-lg mb-2 border border-chapter-inactive bg-chapter-inactive cursor-pointer hover:border-chapter-hover transition-all duration-200"
-                }
+                    ? "border-2 bg-chapter-active border-chapter-active-border"
+                    : "border border-chapter-inactive bg-chapter-inactive hover:border-chapter-hover"
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">{chapter.title}</p>
-                  {chapter.isComplete && (
-                    <Check className="h-4 w-4 text-green-600 shrink-0" />
-                  )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <p className="text-sm font-medium text-foreground truncate">{chapter.title}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {chapter.isComplete && (
+                      <Check className="h-4 w-4 text-green-600" />
+                    )}
+                    <button
+                      onClick={(e) => handleDeleteChapter(e, chapter.id)}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
                   {chapter.wordCount.toLocaleString()} words
                 </p>
               </div>
@@ -109,8 +133,25 @@ const Editor = () => {
         {/* Center Editor */}
         <main className="flex-1 bg-background overflow-y-auto">
           <div className="max-w-3xl mx-auto px-12 py-8 prose prose-lg">
-            <h1 className="text-3xl font-bold mb-6 text-foreground">{currentChapter.title}</h1>
-            <p className="italic text-muted-foreground">Start writing your chapter here...</p>
+            {currentChapter ? (
+              <>
+                <h1 className="text-3xl font-bold mb-2 text-foreground">{currentChapter.title}</h1>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6 not-prose">
+                  <span>{currentChapter.wordCount.toLocaleString()} words</span>
+                  <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    currentChapter.isComplete
+                      ? "bg-green-100 text-green-700"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {currentChapter.isComplete ? "Complete" : "Draft"}
+                  </span>
+                </div>
+                <p className="italic text-muted-foreground">Start writing your chapter here...</p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Select a chapter to start writing</p>
+            )}
           </div>
         </main>
 
@@ -130,7 +171,7 @@ const Editor = () => {
               <p className="text-sm font-medium text-foreground">Progress</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              {currentChapter.wordCount.toLocaleString()} words today
+              {currentChapter ? `${currentChapter.wordCount.toLocaleString()} words today` : "0 words today"}
             </p>
           </div>
         </aside>
