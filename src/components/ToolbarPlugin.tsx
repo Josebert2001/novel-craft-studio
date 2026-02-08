@@ -118,61 +118,63 @@ export default function ToolbarPlugin() {
   );
 
   return (
-    <div className="lexical-toolbar">
-      <ToolbarButton
-        onClick={() => handleFormatText('bold')}
-        icon={Bold}
-        title="Bold (Ctrl+B)"
-        isActive={isBold}
-      />
-      <ToolbarButton
-        onClick={() => handleFormatText('italic')}
-        icon={Italic}
-        title="Italic (Ctrl+I)"
-        isActive={isItalic}
-      />
-      <ToolbarButton
-        onClick={() => handleFormatText('underline')}
-        icon={Underline}
-        title="Underline (Ctrl+U)"
-        isActive={isUnderline}
-      />
-      <div className="toolbar-divider" />
-      <ToolbarButton
-        onClick={() => handleHeading('h1')}
-        icon={Heading1}
-        title="Heading 1"
-        isActive={blockType === 'h1'}
-      />
-      <ToolbarButton
-        onClick={() => handleHeading('h2')}
-        icon={Heading2}
-        title="Heading 2"
-        isActive={blockType === 'h2'}
-      />
-      <ToolbarButton
-        onClick={() => handleHeading('h3')}
-        icon={Heading3}
-        title="Heading 3"
-        isActive={blockType === 'h3'}
-      />
-      <div className="toolbar-divider" />
-      <ToolbarButton
-        onClick={() => {
-          editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
-        }}
-        icon={List}
-        title="Bullet List"
-        isActive={blockType === 'bullet'}
-      />
-      <ToolbarButton
-        onClick={() => {
-          editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
-        }}
-        icon={ListOrdered}
-        title="Numbered List"
-        isActive={blockType === 'number'}
-      />
+    <div className="lexical-toolbar-wrapper">
+      <div className="lexical-toolbar">
+        <ToolbarButton
+          onClick={() => handleFormatText('bold')}
+          icon={Bold}
+          title="Bold (Ctrl+B)"
+          isActive={isBold}
+        />
+        <ToolbarButton
+          onClick={() => handleFormatText('italic')}
+          icon={Italic}
+          title="Italic (Ctrl+I)"
+          isActive={isItalic}
+        />
+        <ToolbarButton
+          onClick={() => handleFormatText('underline')}
+          icon={Underline}
+          title="Underline (Ctrl+U)"
+          isActive={isUnderline}
+        />
+        <div className="toolbar-divider" />
+        <ToolbarButton
+          onClick={() => handleHeading('h1')}
+          icon={Heading1}
+          title="Heading 1"
+          isActive={blockType === 'h1'}
+        />
+        <ToolbarButton
+          onClick={() => handleHeading('h2')}
+          icon={Heading2}
+          title="Heading 2"
+          isActive={blockType === 'h2'}
+        />
+        <ToolbarButton
+          onClick={() => handleHeading('h3')}
+          icon={Heading3}
+          title="Heading 3"
+          isActive={blockType === 'h3'}
+        />
+        <div className="toolbar-divider" />
+        <ToolbarButton
+          onClick={() => {
+            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+          }}
+          icon={List}
+          title="Bullet List"
+          isActive={blockType === 'bullet'}
+        />
+        <ToolbarButton
+          onClick={() => {
+            editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+          }}
+          icon={ListOrdered}
+          title="Numbered List"
+          isActive={blockType === 'number'}
+        />
+      </div>
     </div>
   );
 }

@@ -330,7 +330,7 @@ const Editor = () => {
                     {currentChapter.isComplete ? "Complete" : "Draft"}
                   </span>
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden relative pt-14">
                   <LexicalEditor
                     initialContent={currentChapter.content}
                     onChange={handleEditorChange}

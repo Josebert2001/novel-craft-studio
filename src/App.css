@@ -52,24 +52,20 @@
   height: 100%;
 }
 
-/* Toolbar - subtle, recedes until needed */
+.lexical-editor-container .lexical-toolbar-wrapper {
+  position: absolute;
+  top: -46px;
+  left: 0;
+  z-index: 10;
+}
+
+/* Toolbar - inline with title bar */
 .lexical-toolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 2px;
+  padding: 4px 0;
   background-color: transparent;
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  opacity: 0.5;
-  transition: opacity 0.3s ease;
-}
-
-.lexical-toolbar:hover,
-.lexical-toolbar:focus-within {
-  opacity: 1;
 }
 
 .toolbar-button {
