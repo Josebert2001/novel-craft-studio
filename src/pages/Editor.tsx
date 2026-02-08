@@ -314,35 +314,32 @@ const Editor = () => {
         </aside>
 
         {/* Center Editor */}
-        <main className="flex-1 bg-background overflow-hidden flex flex-col">
-          <div className="max-w-3xl mx-auto w-full px-12 py-8 flex flex-col flex-1">
-            {currentChapter ? (
-              <>
-                <h1 className="text-3xl font-bold mb-2 text-foreground">{currentChapter.title}</h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
-                  <span>{currentChapter.wordCount.toLocaleString()} words</span>
-                  <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    currentChapter.isComplete
-                      ? "bg-green-100 text-green-700"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {currentChapter.isComplete ? "Complete" : "Draft"}
-                  </span>
-                </div>
-                <div className="flex-1 overflow-hidden relative pt-14">
+        <main className="flex-1 bg-muted/30 overflow-hidden flex flex-col">
+          {currentChapter ? (
+            <>
+              {/* Chapter header - outside the canvas */}
+              <div className="px-6 py-3 border-b border-border bg-muted/50">
+                <h1 className="text-base font-semibold text-foreground">{currentChapter.title}</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {currentChapter.wordCount.toLocaleString()} words • {currentChapter.isComplete ? "Complete" : "Draft"}
+                </p>
+              </div>
+
+              {/* Editor canvas - Word-like blank page */}
+              <div className="flex-1 overflow-y-auto flex justify-center py-8">
+                <div className="w-full max-w-[800px]">
                   <LexicalEditor
                     initialContent={currentChapter.content}
                     onChange={handleEditorChange}
                     onWordCountChange={handleWordCountChange}
-                    placeholder="Start writing your chapter..."
+                    placeholder="Start writing..."
                   />
                 </div>
-              </>
-            ) : (
-              <p className="text-muted-foreground">Select a chapter to start writing</p>
+              </div>
+            </>
+          ) : (
+              <p className="text-muted-foreground p-6">Select a chapter to start writing</p>
             )}
-          </div>
         </main>
 
         {/* Right Sidebar */}
