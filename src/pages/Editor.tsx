@@ -132,11 +132,11 @@ const Editor = () => {
 
         {/* Center Editor */}
         <main className="flex-1 bg-background overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-12 py-8 prose prose-lg">
+          <div className="max-w-3xl mx-auto px-12 py-8">
             {currentChapter ? (
               <>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{currentChapter.title}</h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6 not-prose">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
                   <span>{currentChapter.wordCount.toLocaleString()} words</span>
                   <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -147,7 +147,22 @@ const Editor = () => {
                     {currentChapter.isComplete ? "Complete" : "Draft"}
                   </span>
                 </div>
-                <p className="italic text-muted-foreground">Start writing your chapter here...</p>
+                <textarea
+                  value={currentChapter.content}
+                  onChange={(e) => {
+                    const newContent = e.target.value;
+                    const newWordCount = newContent.trim() ? newContent.trim().split(/\s+/).length : 0;
+                    setChapters((prev) =>
+                      prev.map((ch) =>
+                        ch.id === currentChapterId
+                          ? { ...ch, content: newContent, wordCount: newWordCount }
+                          : ch
+                      )
+                    );
+                  }}
+                  placeholder="Start writing your chapter here..."
+                  className="w-full min-h-[60vh] bg-transparent text-foreground text-lg leading-relaxed resize-none outline-none placeholder:text-muted-foreground/50"
+                />
               </>
             ) : (
               <p className="text-muted-foreground">Select a chapter to start writing</p>
