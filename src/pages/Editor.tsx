@@ -314,12 +314,12 @@ const Editor = () => {
         </aside>
 
         {/* Center Editor */}
-        <main className="flex-1 bg-background overflow-hidden flex flex-col">
+        <main className="flex-1 overflow-y-auto flex flex-col" style={{ backgroundColor: '#e0e0e0' }}>
           {currentChapter ? (
             <>
-              {/* Chapter info - above toolbar */}
-              <div className="max-w-[750px] mx-auto w-full px-12 pt-8 pb-4">
-                <h1 className="text-3xl font-bold mb-2 text-foreground">{currentChapter.title}</h1>
+              {/* Chapter info - above editor page */}
+              <div className="max-w-[816px] mx-auto w-full px-4 pt-6 pb-2">
+                <h1 className="text-2xl font-bold mb-1 text-foreground">{currentChapter.title}</h1>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <span>{currentChapter.wordCount.toLocaleString()} words</span>
                   <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
@@ -332,18 +332,20 @@ const Editor = () => {
                   </span>
                 </div>
               </div>
-              {/* Editor fills remaining space */}
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <LexicalEditor
-                  initialContent={currentChapter.content}
-                  onChange={handleEditorChange}
-                  onWordCountChange={handleWordCountChange}
-                  placeholder="Start writing your chapter..."
-                />
+              {/* Word-style page */}
+              <div className="flex-1 flex flex-col items-center px-4 pb-8">
+                <div className="word-page">
+                  <LexicalEditor
+                    initialContent={currentChapter.content}
+                    onChange={handleEditorChange}
+                    onWordCountChange={handleWordCountChange}
+                    placeholder="Start writing your chapter..."
+                  />
+                </div>
               </div>
             </>
           ) : (
-            <div className="max-w-[750px] mx-auto w-full px-12 py-8">
+            <div className="max-w-[816px] mx-auto w-full px-4 py-8">
               <p className="text-muted-foreground">Select a chapter to start writing</p>
             </div>
           )}
