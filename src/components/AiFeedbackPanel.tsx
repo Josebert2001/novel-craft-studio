@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Check, Copy } from "lucide-react";
 import { AI_PERSONAS, AiPersona } from "../config/aiPersonas";
 import { analyzeText } from "../lib/gemini";
 
 interface AiFeedbackPanelProps {
   selectedText: string;
+  onApplySuggestion?: (text: string) => void;
+  onDismiss?: () => void;
+  onAnalyze?: (persona: string, feedback: string) => void;
 }
 
-export default function AiFeedbackPanel({ selectedText }: AiFeedbackPanelProps) {
+export default function AiFeedbackPanel({
+  selectedText,
+  onApplySuggestion,
+  onDismiss: onDismissCallback,
+  onAnalyze,
+}: AiFeedbackPanelProps) {
   const [activePersona, setActivePersona] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const personas = Object.values(AI_PERSONAS);
 
@@ -38,6 +47,7 @@ export default function AiFeedbackPanel({ selectedText }: AiFeedbackPanelProps) 
       const response = await analyzeText(selectedText, persona.systemPrompt);
       setFeedback(response);
       setActivePersona(persona.id);
+      onAnalyze?.(persona.id, response);
     } catch (err) {
       setError("Unable to analyze. Please try again.");
       console.error("Analysis error:", err);
@@ -50,6 +60,44 @@ export default function AiFeedbackPanel({ selectedText }: AiFeedbackPanelProps) 
     setActivePersona(null);
     setFeedback("");
     setError("");
+    onDismissCallback?.();
+  };
+
+  const handleCopyFeedback = async () => {
+    try {
+      await navigator.clipboard.writeText(feedback);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const detectIfRewrite = (text: string): boolean => {
+    // Check if feedback contains quotes (suggested text) or code blocks
+    return (
+      text.includes('"') ||
+      text.includes("'") ||
+      text.includes("`") ||
+      text.includes("**")
+    );
+  };
+
+  const extractRewriteFromFeedback = (text: string): string => {
+    // Try to extract text in quotes
+    const quoteMatch = text.match(/"([^"]+)"/);
+    if (quoteMatch && quoteMatch[1]) {
+      return quoteMatch[1];
+    }
+
+    // Try to extract text in backticks
+    const backtickMatch = text.match(/`([^`]+)`/);
+    if (backtickMatch && backtickMatch[1]) {
+      return backtickMatch[1];
+    }
+
+    // If no specific extraction, return first 100 chars with asterisks removed
+    return text.replace(/\*\*/g, "").substring(0, 150).trim();
   };
 
   const textPreview =
@@ -157,28 +205,75 @@ export default function AiFeedbackPanel({ selectedText }: AiFeedbackPanelProps) 
                 </p>
                 <button
                   onClick={handleDismiss}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X size={16} />
                 </button>
               </div>
-              <p className="text-sm text-foreground leading-relaxed">
+              <p className="text-sm text-foreground leading-relaxed mb-4">
                 {feedback}
               </p>
-              <button
-                onClick={() => {
-                  const personaKey = Object.keys(AI_PERSONAS).find(
-                    (key) => AI_PERSONAS[key].id === activePersona
-                  );
-                  if (personaKey) {
-                    handlePersonaClick(AI_PERSONAS[personaKey]);
-                  }
-                }}
-                disabled={loading}
-                className="mt-3 text-xs font-medium text-primary hover:text-primary/80 underline disabled:opacity-50"
-              >
-                Try another persona
-              </button>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 border-t border-border pt-3">
+                <div className="flex gap-2">
+                  {/* Apply Suggestion Button */}
+                  {detectIfRewrite(feedback) && (
+                    <button
+                      onClick={() => {
+                        const rewrite = extractRewriteFromFeedback(feedback);
+                        onApplySuggestion?.(rewrite);
+                        handleDismiss();
+                      }}
+                      className="flex-1 px-3 py-2 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors"
+                    >
+                      Apply Suggestion
+                    </button>
+                  )}
+
+                  {/* Copy Feedback Button */}
+                  <button
+                    onClick={handleCopyFeedback}
+                    className="flex items-center justify-center gap-1 px-3 py-2 border border-border text-xs font-medium text-foreground rounded hover:bg-muted transition-colors flex-1"
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={14} />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Dismiss Button and Try Another */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDismiss}
+                    className="flex-1 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                  <button
+                    onClick={() => {
+                      const personaKey = Object.keys(AI_PERSONAS).find(
+                        (key) => AI_PERSONAS[key].id === activePersona
+                      );
+                      if (personaKey) {
+                        handlePersonaClick(AI_PERSONAS[personaKey]);
+                      }
+                    }}
+                    disabled={loading}
+                    className="flex-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors underline disabled:opacity-50"
+                  >
+                    Try another
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, FileText, Plus, TrendingUp, X } from "lucide-react";
+import { Check, FileText, Plus, X, Settings } from "lucide-react";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
+import SettingsModal from "../components/SettingsModal";
+import RecentFeedback, { FeedbackRecord } from "../components/RecentFeedback";
 
 interface Chapter {
   id: string;
@@ -25,7 +27,80 @@ const Editor = () => {
   const [selectedText, setSelectedText] = useState<string>("");
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Settings and API Key state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem("ichen_gemini_key") || "";
+  });
+
+  // AI Usage tracking
+  const [totalAiRequests, setTotalAiRequests] = useState<number>(() => {
+    const stored = localStorage.getItem("ichen_ai_usage");
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Reset if date is different
+      if (data.date !== new Date().toDateString()) {
+        return 0;
+      }
+      return data.count || 0;
+    }
+    return 0;
+  });
+
+  // Feedback history
+  const [feedbackHistory, setFeedbackHistory] = useState<FeedbackRecord[]>(() => {
+    const stored = localStorage.getItem("ichen_feedback_history");
+    return stored ? JSON.parse(stored) : [];
+  });
+
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
+
+  const handleSaveApiKey = (key: string) => {
+    setApiKey(key);
+    localStorage.setItem("ichen_gemini_key", key);
+    setSettingsOpen(false);
+  };
+
+  const incrementAiUsage = () => {
+    const newCount = totalAiRequests + 1;
+    setTotalAiRequests(newCount);
+    localStorage.setItem(
+      "ichen_ai_usage",
+      JSON.stringify({
+        count: newCount,
+        date: new Date().toDateString(),
+      })
+    );
+  };
+
+  const addFeedbackToHistory = (
+    persona: string,
+    selectedTextStr: string,
+    feedback: string
+  ) => {
+    const newRecord: FeedbackRecord = {
+      id: Date.now().toString(),
+      persona,
+      timestamp: Date.now(),
+      selectedText: selectedTextStr,
+      feedback,
+    };
+
+    const updated = [newRecord, ...feedbackHistory].slice(0, 5);
+    setFeedbackHistory(updated);
+    localStorage.setItem("ichen_feedback_history", JSON.stringify(updated));
+  };
+
+  const deleteFeedbackRecord = (id: string) => {
+    const updated = feedbackHistory.filter((r) => r.id !== id);
+    setFeedbackHistory(updated);
+    localStorage.setItem("ichen_feedback_history", JSON.stringify(updated));
+  };
+
+  const clearFeedbackHistory = () => {
+    setFeedbackHistory([]);
+    localStorage.removeItem("ichen_feedback_history");
+  };
 
   const formatTime = (date: Date): string => {
     return date.toLocaleTimeString("en-US", {
@@ -119,6 +194,21 @@ const Editor = () => {
 
   return (
     <div className="flex flex-col h-screen">
+      {/* API Key Missing Banner */}
+      {!apiKey && (
+        <div
+          onClick={() => setSettingsOpen(true)}
+          className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
+        >
+          <p className="text-sm text-amber-900">
+            Add your Gemini API key to enable AI features
+          </p>
+          <button className="text-sm font-medium text-amber-700 hover:text-amber-900">
+            Configure Now →
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="h-16 min-h-[64px] bg-background border-b flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
@@ -133,6 +223,9 @@ const Editor = () => {
             </span>
           )}
           <div className="flex items-center gap-2">
+            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted" onClick={() => setSettingsOpen(true)} title="Settings">
+              <Settings size={18} />
+            </button>
             <button className="px-4 py-2 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
               Export
             </button>
@@ -256,26 +349,80 @@ const Editor = () => {
         <aside className="w-[300px] min-w-[300px] bg-muted border-l p-4 overflow-y-auto">
           <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
 
-          {/* AI Suggestions Card */}
-          <div>
-            <AiFeedbackPanel selectedText={selectedText} />
-          </div>
-
-          {/* Progress Card */}
-          <div className="bg-background border border-border rounded-lg p-4 mt-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-foreground" />
-              <p className="text-sm font-medium text-foreground">Progress</p>
+          {/* Stats Card */}
+          <div className="bg-background border border-border rounded-lg p-4 mb-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Words Selected</span>
+                <span className="text-sm font-semibold text-foreground">
+                  {selectedText.split(/\s+/).filter(Boolean).length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Chapter Words</span>
+                <span className="text-sm font-semibold text-foreground">
+                  {currentChapter?.wordCount.toLocaleString() || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">AI Analyses</span>
+                <span className={`text-sm font-semibold ${
+                  totalAiRequests >= 10 ? "text-red-600" : "text-foreground"
+                }`}>
+                  {totalAiRequests}/10
+                </span>
+              </div>
+              {totalAiRequests >= 10 && (
+                <p className="text-xs text-red-600 mt-2">
+                  Daily limit reached. Upgrade for more analyses.
+                </p>
+              )}
+              {totalAiRequests >= 8 && totalAiRequests < 10 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  {10 - totalAiRequests} analyses remaining today
+                </p>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {currentChapter ? `${currentChapter.wordCount.toLocaleString()} words today` : "0 words today"}
-            </p>
           </div>
 
-          {/* Keyboard Shortcuts */}
-          <KeyboardShortcuts />
+          {/* AI Feedback Panel */}
+          <div className="mb-4">
+            <AiFeedbackPanel
+              selectedText={selectedText}
+              onApplySuggestion={(text) => {
+                // TODO: Apply text to editor
+                console.log("Applying suggestion:", text);
+              }}
+              onDismiss={() => {
+                setSelectedText("");
+              }}
+              onAnalyze={(persona, feedback) => {
+                if (totalAiRequests < 10) {
+                  incrementAiUsage();
+                  addFeedbackToHistory(persona, selectedText, feedback);
+                }
+              }}
+            />
+          </div>
+
+          {/* Recent Feedback Section */}
+          <div className="border-t border-border pt-4">
+            <RecentFeedback
+              history={feedbackHistory}
+              onDelete={deleteFeedbackRecord}
+              onClearAll={clearFeedbackHistory}
+            />
+          </div>
         </aside>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSave={handleSaveApiKey}
+        initialApiKey={apiKey}
+      />
     </div>
   );
 };
