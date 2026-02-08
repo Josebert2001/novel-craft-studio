@@ -5,6 +5,9 @@ import { analyzeText } from "../lib/gemini";
 
 interface AiFeedbackPanelProps {
   selectedText: string;
+  apiKey?: string;
+  totalAiRequests?: number;
+  aiRequestLimit?: number;
   onApplySuggestion?: (text: string) => void;
   onDismiss?: () => void;
   onAnalyze?: (persona: string, feedback: string) => void;
@@ -12,6 +15,9 @@ interface AiFeedbackPanelProps {
 
 export default function AiFeedbackPanel({
   selectedText,
+  apiKey = "",
+  totalAiRequests = 0,
+  aiRequestLimit = 10,
   onApplySuggestion,
   onDismiss: onDismissCallback,
   onAnalyze,
@@ -25,6 +31,18 @@ export default function AiFeedbackPanel({
   const personas = Object.values(AI_PERSONAS);
 
   const handlePersonaClick = async (persona: AiPersona) => {
+    // Check if API key is configured
+    if (!apiKey) {
+      setError("Please configure your Gemini API key in Settings.");
+      return;
+    }
+
+    // Check if usage limit is reached
+    if (totalAiRequests >= aiRequestLimit) {
+      setError(`Daily analysis limit reached (${aiRequestLimit}/day). Upgrade to continue.`);
+      return;
+    }
+
     if (activePersona === persona.id && feedback) {
       // If clicking the same persona, allow re-analysis
       // Reset to allow new analysis
@@ -45,6 +63,13 @@ export default function AiFeedbackPanel({
 
     try {
       const response = await analyzeText(selectedText, persona.systemPrompt);
+      
+      // Check if response is an error message (from analyzeText error handling)
+      if (response.includes("Please configure") || response.includes("Invalid API key")) {
+        setError(response);
+        return;
+      }
+
       setFeedback(response);
       setActivePersona(persona.id);
       onAnalyze?.(persona.id, response);
@@ -140,23 +165,35 @@ export default function AiFeedbackPanel({
 
           {/* Persona Buttons Grid */}
           <div className="grid grid-cols-2 gap-2">
-            {personas.map((persona) => (
-              <button
-                key={persona.id}
-                onClick={() => handlePersonaClick(persona)}
-                disabled={loading}
-                className={`p-3 rounded-lg border-2 transition-all ${
-                  activePersona === persona.id
-                    ? `${getPersonaColor(persona.color).border} bg-white`
-                    : "border-border bg-background hover:border-muted-foreground/50"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <div className="text-lg mb-1">{persona.icon}</div>
-                <div className="text-xs font-medium text-foreground">
-                  {persona.name}
-                </div>
-              </button>
-            ))}
+            {personas.map((persona) => {
+              const disabledReason =
+                !apiKey
+                  ? "Configure API key in Settings"
+                  : totalAiRequests >= aiRequestLimit
+                    ? `Daily limit reached (${aiRequestLimit}/day)`
+                    : null;
+
+              return (
+                <button
+                  key={persona.id}
+                  onClick={() => handlePersonaClick(persona)}
+                  disabled={loading || !!disabledReason}
+                  title={disabledReason}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    activePersona === persona.id
+                      ? `${getPersonaColor(persona.color).border} bg-white`
+                      : "border-border bg-background hover:border-muted-foreground/50"
+                  } disabled:opacity-50 disabled:cursor-not-allowed ${
+                    disabledReason ? "disabled:hover:border-border" : ""
+                  }`}
+                >
+                  <div className="text-lg mb-1">{persona.icon}</div>
+                  <div className="text-xs font-medium text-foreground">
+                    {persona.name}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Loading State */}

@@ -389,6 +389,9 @@ const Editor = () => {
           <div className="mb-4">
             <AiFeedbackPanel
               selectedText={selectedText}
+              apiKey={apiKey}
+              totalAiRequests={totalAiRequests}
+              aiRequestLimit={10}
               onApplySuggestion={(text) => {
                 // TODO: Apply text to editor
                 console.log("Applying suggestion:", text);

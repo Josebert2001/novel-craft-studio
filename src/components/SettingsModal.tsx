@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Check, AlertCircle } from "lucide-react";
+import { getApiKey } from "../lib/gemini";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,7 +39,11 @@ export default function SettingsModal({
     setTestResult(null);
 
     try {
-      // Dynamic import to avoid issues if @google/generative-ai isn't available
+      // Temporarily save key to localStorage for test
+      const tempKey = localStorage.getItem("ichen_gemini_key");
+      localStorage.setItem("ichen_gemini_key", apiKey);
+
+      // Use dynamic import to load GoogleGenerativeAI
       const { GoogleGenerativeAI } = await import(
         "@google/generative-ai"
       );
@@ -50,10 +55,23 @@ export default function SettingsModal({
       await model.generateContent("Say 'OK' in one word");
 
       setTestResult("Connection successful! ✓");
+
+      // Restore original key
+      if (tempKey) {
+        localStorage.setItem("ichen_gemini_key", tempKey);
+      }
     } catch (err: unknown) {
+      // Restore original key on error
+      const tempKey = localStorage.getItem("ichen_gemini_key");
+      if (tempKey) {
+        localStorage.setItem("ichen_gemini_key", tempKey);
+      }
+
       const errorMessage = err instanceof Error ? err.message : String(err);
-      if (errorMessage.includes("API key")) {
+      if (errorMessage.includes("API key") || errorMessage.includes("401")) {
         setTestError("Invalid API key. Please check and try again.");
+      } else if (errorMessage.includes("network") || errorMessage.includes("ENOTFOUND")) {
+        setTestError("Network error. Please check your internet connection.");
       } else {
         setTestError("Connection failed. " + errorMessage);
       }
