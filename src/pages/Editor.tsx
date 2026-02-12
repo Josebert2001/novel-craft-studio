@@ -5,6 +5,10 @@ import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
 import SettingsModal from "../components/SettingsModal";
 import RecentFeedback, { FeedbackRecord } from "../components/RecentFeedback";
+import EmotionHeatmap from "../components/EmotionHeatmap";
+import WhatIfBranching from "../components/WhatIfBranching";
+import GhostReader from "../components/GhostReader";
+import StoryBible from "../components/StoryBible";
 
 interface Chapter {
   id: string;
@@ -25,6 +29,7 @@ const Editor = () => {
   const [selectedText, setSelectedText] = useState<string>("");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible">("coach");
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Settings and API Key state
@@ -357,75 +362,141 @@ const Editor = () => {
         </main>
 
         {/* Right Sidebar */}
-        <aside className={`bg-muted border-l p-4 overflow-y-auto transition-all duration-300 ${rightSidebarOpen ? "w-[300px] min-w-[300px]" : "w-0 min-w-0 p-0 overflow-hidden border-l-0"}`}>
-          <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
-
-          {/* Stats Card */}
-          <div className="bg-background border border-border rounded-lg p-4 mb-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Words Selected</span>
-                <span className="text-sm font-semibold text-foreground">
-                  {selectedText.split(/\s+/).filter(Boolean).length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Chapter Words</span>
-                <span className="text-sm font-semibold text-foreground">
-                  {currentChapter?.wordCount.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">AI Analyses</span>
-                <span className={`text-sm font-semibold ${
-                  totalAiRequests >= 10 ? "text-red-600" : "text-foreground"
-                }`}>
-                  {totalAiRequests}/10
-                </span>
-              </div>
-              {totalAiRequests >= 10 && (
-                <p className="text-xs text-red-600 mt-2">
-                  Daily limit reached. Upgrade for more analyses.
-                </p>
-              )}
-              {totalAiRequests >= 8 && totalAiRequests < 10 && (
-                <p className="text-xs text-amber-600 mt-2">
-                  {10 - totalAiRequests} analyses remaining today
-                </p>
-              )}
-            </div>
+        <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col ${rightSidebarOpen ? "w-[320px] min-w-[320px]" : "w-0 min-w-0 overflow-hidden border-l-0"}`}>
+          {/* Tab Bar */}
+          <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
+            {[
+              { id: "coach" as const, label: "✨", title: "Coach" },
+              { id: "heatmap" as const, label: "🎨", title: "Heatmap" },
+              { id: "ghost" as const, label: "👁️", title: "Ghost" },
+              { id: "branch" as const, label: "🔀", title: "Branch" },
+              { id: "bible" as const, label: "📖", title: "Bible" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setRightTab(tab.id)}
+                className={`flex-1 px-2 py-2.5 text-[10px] font-medium transition-colors ${
+                  rightTab === tab.id
+                    ? "text-primary border-b-2 border-primary bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={tab.title}
+              >
+                <span className="text-sm block">{tab.label}</span>
+                <span className="block mt-0.5">{tab.title}</span>
+              </button>
+            ))}
           </div>
 
-          {/* AI Feedback Panel */}
-          <div className="mb-4">
-            <AiFeedbackPanel
-              selectedText={selectedText}
-              apiKey={apiKey}
-              totalAiRequests={totalAiRequests}
-              aiRequestLimit={10}
-              onApplySuggestion={(text) => {
-                // TODO: Apply text to editor
-                console.log("Applying suggestion:", text);
-              }}
-              onDismiss={() => {
-                setSelectedText("");
-              }}
-              onAnalyze={(persona, feedback) => {
-                if (totalAiRequests < 10) {
-                  incrementAiUsage();
-                  addFeedbackToHistory(persona, selectedText, feedback);
-                }
-              }}
-            />
-          </div>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {rightTab === "coach" && (
+              <>
+                <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
 
-          {/* Recent Feedback Section */}
-          <div className="border-t border-border pt-4">
-            <RecentFeedback
-              history={feedbackHistory}
-              onDelete={deleteFeedbackRecord}
-              onClearAll={clearFeedbackHistory}
-            />
+                {/* Stats Card */}
+                <div className="bg-background border border-border rounded-lg p-4 mb-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Words Selected</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {selectedText.split(/\s+/).filter(Boolean).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Chapter Words</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {currentChapter?.wordCount.toLocaleString() || 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">AI Analyses</span>
+                      <span className={`text-sm font-semibold ${
+                        totalAiRequests >= 10 ? "text-destructive" : "text-foreground"
+                      }`}>
+                        {totalAiRequests}/10
+                      </span>
+                    </div>
+                    {totalAiRequests >= 10 && (
+                      <p className="text-xs text-destructive mt-2">
+                        Daily limit reached. Upgrade for more analyses.
+                      </p>
+                    )}
+                    {totalAiRequests >= 8 && totalAiRequests < 10 && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        {10 - totalAiRequests} analyses remaining today
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Feedback Panel */}
+                <div className="mb-4">
+                  <AiFeedbackPanel
+                    selectedText={selectedText}
+                    apiKey={apiKey}
+                    totalAiRequests={totalAiRequests}
+                    aiRequestLimit={10}
+                    onApplySuggestion={(text) => {
+                      console.log("Applying suggestion:", text);
+                    }}
+                    onDismiss={() => {
+                      setSelectedText("");
+                    }}
+                    onAnalyze={(persona, feedback) => {
+                      if (totalAiRequests < 10) {
+                        incrementAiUsage();
+                        addFeedbackToHistory(persona, selectedText, feedback);
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Recent Feedback Section */}
+                <div className="border-t border-border pt-4">
+                  <RecentFeedback
+                    history={feedbackHistory}
+                    onDelete={deleteFeedbackRecord}
+                    onClearAll={clearFeedbackHistory}
+                  />
+                </div>
+              </>
+            )}
+
+            {rightTab === "heatmap" && (
+              <EmotionHeatmap
+                chapterContent={currentChapter?.content || ""}
+                apiKey={apiKey}
+                onAnalyze={incrementAiUsage}
+              />
+            )}
+
+            {rightTab === "ghost" && (
+              <GhostReader
+                chapterContent={currentChapter?.content || ""}
+                apiKey={apiKey}
+                onAnalyze={incrementAiUsage}
+              />
+            )}
+
+            {rightTab === "branch" && (
+              <WhatIfBranching
+                selectedText={selectedText}
+                apiKey={apiKey}
+                onApply={(text) => {
+                  console.log("Apply branch:", text);
+                }}
+                onAnalyze={incrementAiUsage}
+              />
+            )}
+
+            {rightTab === "bible" && (
+              <StoryBible
+                chapterContent={currentChapter?.content || ""}
+                apiKey={apiKey}
+                onAnalyze={incrementAiUsage}
+              />
+            )}
           </div>
         </aside>
       </div>
