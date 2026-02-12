@@ -113,10 +113,10 @@
 
 .lexical-content-editable {
   font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.7;
   letter-spacing: 0.01em;
-  padding: 60px 80px;
+  padding: 16px 20px;
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -138,11 +138,11 @@
 
 .lexical-placeholder {
   position: absolute;
-  top: 60px;
-  left: 80px;
+  top: 16px;
+  left: 20px;
   font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.7;
   color: hsl(var(--muted-foreground) / 0.35);
   pointer-events: none;
   font-style: italic;
