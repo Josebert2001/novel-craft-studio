@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, FileText, Plus, X, Settings } from "lucide-react";
+import { Check, FileText, Plus, X, Settings, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
@@ -23,6 +23,8 @@ const Editor = () => {
   const [currentChapterId, setCurrentChapterId] = useState("ch-1");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Settings and API Key state
@@ -210,6 +212,13 @@ const Editor = () => {
       {/* Header */}
       <header className="h-16 min-h-[64px] bg-background border-b flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            title={leftSidebarOpen ? "Hide chapters" : "Show chapters"}
+          >
+            {leftSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+          </button>
           <span className="text-primary font-bold text-xl">ICHEN</span>
           <div className="w-px h-6 bg-border" />
           <span className="text-foreground text-sm">My First Novel</span>
@@ -230,6 +239,13 @@ const Editor = () => {
             <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
               Save
             </button>
+            <button
+              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+              title={rightSidebarOpen ? "Hide AI panel" : "Show AI panel"}
+            >
+              {rightSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+            </button>
           </div>
         </div>
       </header>
@@ -237,7 +253,7 @@ const Editor = () => {
       {/* 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
-        <aside className="w-[250px] min-w-[250px] bg-sidebar border-r p-4 overflow-y-auto">
+        <aside className={`bg-sidebar border-r p-4 overflow-y-auto transition-all duration-300 ${leftSidebarOpen ? "w-[250px] min-w-[250px]" : "w-0 min-w-0 p-0 overflow-hidden border-r-0"}`}>
           <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
 
           {chapters.map((chapter) => {
@@ -341,7 +357,7 @@ const Editor = () => {
         </main>
 
         {/* Right Sidebar */}
-        <aside className="w-[300px] min-w-[300px] bg-muted border-l p-4 overflow-y-auto">
+        <aside className={`bg-muted border-l p-4 overflow-y-auto transition-all duration-300 ${rightSidebarOpen ? "w-[300px] min-w-[300px]" : "w-0 min-w-0 p-0 overflow-hidden border-l-0"}`}>
           <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
 
           {/* Stats Card */}
