@@ -15,9 +15,7 @@ interface Chapter {
 }
 
 const initialChapters: Chapter[] = [
-  { id: "ch-1", title: "Chapter 1: The Beginning", wordCount: 1247, content: "", isComplete: false },
-  { id: "ch-2", title: "Chapter 2: The Journey", wordCount: 543, content: "", isComplete: false },
-  { id: "ch-3", title: "Chapter 3", wordCount: 0, content: "", isComplete: false },
+  { id: "ch-1", title: "Chapter 1", wordCount: 0, content: "", isComplete: false },
 ];
 
 const Editor = () => {
