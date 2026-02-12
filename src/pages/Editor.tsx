@@ -198,67 +198,74 @@ const Editor = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* API Key Missing Banner */}
       {!apiKey && (
         <div
           onClick={() => setSettingsOpen(true)}
-          className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
+          className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
         >
-          <p className="text-sm text-amber-900">
+          <p className="text-xs sm:text-sm text-amber-900 truncate mr-2">
             Add your Gemini API key to enable AI features
           </p>
-          <button className="text-sm font-medium text-amber-700 hover:text-amber-900">
-            Configure Now →
+          <button className="text-xs sm:text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap shrink-0">
+            Configure →
           </button>
         </div>
       )}
 
       {/* Header */}
-      <header className="h-16 min-h-[64px] bg-background border-b flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
+      <header className="h-12 sm:h-16 min-h-[48px] sm:min-h-[64px] bg-background border-b flex items-center justify-between px-2 sm:px-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted shrink-0"
             title={leftSidebarOpen ? "Hide chapters" : "Show chapters"}
           >
             {leftSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
           </button>
-          <span className="text-primary font-bold text-xl">ICHEN</span>
-          <div className="w-px h-6 bg-border" />
-          <span className="text-foreground text-sm">My First Novel</span>
+          <span className="text-primary font-bold text-lg sm:text-xl shrink-0">ICHEN</span>
+          <div className="w-px h-5 sm:h-6 bg-border hidden sm:block" />
+          <span className="text-foreground text-sm truncate hidden sm:inline">My First Novel</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {lastSaved && (
-            <span className="text-xs text-gray-500">
-              Saved at {formatTime(lastSaved)}
+            <span className="text-[10px] sm:text-xs text-muted-foreground hidden md:inline">
+              Saved {formatTime(lastSaved)}
             </span>
           )}
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted" onClick={() => setSettingsOpen(true)} title="Settings">
-              <Settings size={18} />
-            </button>
-            <button className="px-4 py-2 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
-              Export
-            </button>
-            <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
-              Save
-            </button>
-            <button
-              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
-              title={rightSidebarOpen ? "Hide AI panel" : "Show AI panel"}
-            >
-              {rightSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-            </button>
-          </div>
+          <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted" onClick={() => setSettingsOpen(true)} title="Settings">
+            <Settings size={16} />
+          </button>
+          <button className="hidden sm:inline-flex px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
+            Export
+          </button>
+          <button className="px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
+            Save
+          </button>
+          <button
+            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            title={rightSidebarOpen ? "Hide AI panel" : "Show AI panel"}
+          >
+            {rightSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+          </button>
         </div>
       </header>
 
       {/* 3-Column Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Left Sidebar Overlay on mobile */}
+        {leftSidebarOpen && (
+          <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={() => setLeftSidebarOpen(false)} />
+        )}
+
         {/* Left Sidebar */}
-        <aside className={`bg-sidebar border-r p-4 overflow-y-auto transition-all duration-300 ${leftSidebarOpen ? "w-[250px] min-w-[250px]" : "w-0 min-w-0 p-0 overflow-hidden border-r-0"}`}>
+        <aside className={`bg-sidebar border-r overflow-y-auto transition-all duration-300 shrink-0 z-30 ${
+          leftSidebarOpen
+            ? "w-[250px] min-w-[250px] p-4 fixed md:relative top-0 bottom-0 left-0 md:inset-auto md:top-auto md:bottom-auto md:left-auto"
+            : "w-0 min-w-0 p-0 overflow-hidden border-r-0"
+        }`}>
           <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
 
           {chapters.map((chapter) => {
@@ -345,7 +352,7 @@ const Editor = () => {
               </div>
 
               {/* Editor canvas - Word-like blank page */}
-              <div className="flex-1 overflow-y-auto flex justify-center py-8">
+              <div className="flex-1 overflow-y-auto flex justify-center py-4 sm:py-8 px-2 sm:px-0">
                 <div className="w-full max-w-[800px]">
                   <LexicalEditor
                     initialContent={currentChapter.content}
@@ -361,8 +368,17 @@ const Editor = () => {
             )}
         </main>
 
+        {/* Right Sidebar Overlay on mobile */}
+        {rightSidebarOpen && (
+          <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={() => setRightSidebarOpen(false)} />
+        )}
+
         {/* Right Sidebar */}
-        <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col ${rightSidebarOpen ? "w-[320px] min-w-[320px] xl:w-[380px] xl:min-w-[380px] 2xl:w-[420px] 2xl:min-w-[420px]" : "w-0 min-w-0 overflow-hidden border-l-0"}`}>
+        <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col shrink-0 z-30 ${
+          rightSidebarOpen
+            ? "w-[300px] sm:w-[320px] min-w-[300px] sm:min-w-[320px] xl:w-[380px] xl:min-w-[380px] 2xl:w-[420px] 2xl:min-w-[420px] fixed md:relative top-0 bottom-0 right-0 md:inset-auto md:top-auto md:bottom-auto md:right-auto"
+            : "w-0 min-w-0 overflow-hidden border-l-0"
+        }`}>
           {/* Tab Bar */}
           <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
             {[
