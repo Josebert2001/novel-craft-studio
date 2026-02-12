@@ -6,7 +6,7 @@ const Index = () => {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="text-center max-w-2xl">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <BookOpen className="h-12 w-12 text-primary" />
+          <img src="/logo.png" alt="Novel Craft Studio" className="h-12 w-12" />
           <h1 className="text-5xl font-bold text-foreground">Novel Craft Studio</h1>
         </div>
         

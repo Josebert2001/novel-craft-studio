@@ -224,7 +224,7 @@ const Editor = () => {
           >
             {leftSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
           </button>
-          <span className="text-primary font-bold text-lg sm:text-xl shrink-0">ICHEN</span>
+          <img src="/logo.png" alt="Novel Craft Studio" className="h-8 sm:h-10 w-auto shrink-0" />
           <div className="w-px h-5 sm:h-6 bg-border hidden sm:block" />
           <span className="text-foreground text-sm truncate hidden sm:inline">My First Novel</span>
         </div>
