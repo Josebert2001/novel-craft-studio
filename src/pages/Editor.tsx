@@ -362,7 +362,7 @@ const Editor = () => {
         </main>
 
         {/* Right Sidebar */}
-        <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col ${rightSidebarOpen ? "w-[320px] min-w-[320px]" : "w-0 min-w-0 overflow-hidden border-l-0"}`}>
+        <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col ${rightSidebarOpen ? "w-[320px] min-w-[320px] xl:w-[380px] xl:min-w-[380px] 2xl:w-[420px] 2xl:min-w-[420px]" : "w-0 min-w-0 overflow-hidden border-l-0"}`}>
           {/* Tab Bar */}
           <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
             {[
@@ -389,7 +389,7 @@ const Editor = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div key={rightTab} className="flex-1 overflow-y-auto p-4 animate-fade-in">
             {rightTab === "coach" && (
               <>
                 <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
