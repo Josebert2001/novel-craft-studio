@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, GitBranch, Check, Copy, RefreshCw } from "lucide-react";
-import { analyzeText } from "../lib/gemini";
+import { analyzeText, getApiKeyStatus } from "../lib/gemini";
 
 interface Branch {
   id: string;
@@ -10,7 +10,6 @@ interface Branch {
 
 interface WhatIfBranchingProps {
   selectedText: string;
-  apiKey: string;
   onApply?: (text: string) => void;
   onAnalyze?: () => void;
 }
@@ -22,15 +21,17 @@ Return ONLY a JSON array:
 
 Keep each version similar in length to the original. Be creative but maintain the core meaning.`;
 
-export default function WhatIfBranching({ selectedText, apiKey, onApply, onAnalyze }: WhatIfBranchingProps) {
+export default function WhatIfBranching({ selectedText, onApply, onAnalyze }: WhatIfBranchingProps) {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  const hasApiKey = getApiKeyStatus();
+
   const generateBranches = async () => {
-    if (!apiKey) {
-      setError("Configure API key first");
+    if (!hasApiKey) {
+      setError("API key not configured");
       return;
     }
     if (!selectedText || selectedText.trim().length < 10) {
@@ -73,7 +74,7 @@ export default function WhatIfBranching({ selectedText, apiKey, onApply, onAnaly
         </h3>
         <button
           onClick={generateBranches}
-          disabled={loading || !apiKey || !selectedText}
+          disabled={loading || !hasApiKey || !selectedText}
           className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Branch"}
@@ -103,10 +104,7 @@ export default function WhatIfBranching({ selectedText, apiKey, onApply, onAnaly
       )}
 
       {branches.map((branch, i) => (
-        <div
-          key={branch.id}
-          className="bg-background border border-border rounded-lg p-3 space-y-2"
-        >
+        <div key={branch.id} className="bg-background border border-border rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
               Branch {i + 1} • {branch.style}
@@ -115,9 +113,7 @@ export default function WhatIfBranching({ selectedText, apiKey, onApply, onAnaly
           <p className="text-xs text-foreground leading-relaxed">{branch.text}</p>
           <div className="flex gap-1.5">
             <button
-              onClick={() => {
-                onApply?.(branch.text);
-              }}
+              onClick={() => onApply?.(branch.text)}
               className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
             >
               <Check className="h-3 w-3" /> Merge

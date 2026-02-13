@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, FileText, Plus, X, Settings, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil } from "lucide-react";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
-import SettingsModal from "../components/SettingsModal";
 import RecentFeedback, { FeedbackRecord } from "../components/RecentFeedback";
 import EmotionHeatmap from "../components/EmotionHeatmap";
 import WhatIfBranching from "../components/WhatIfBranching";
@@ -32,18 +31,18 @@ const Editor = () => {
   const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible">("coach");
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Settings and API Key state
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [apiKey, setApiKey] = useState<string>(() => {
-    return localStorage.getItem("ichen_gemini_key") || "";
+  // Editable book title
+  const [bookTitle, setBookTitle] = useState<string>(() => {
+    return localStorage.getItem("ichen_book_title") || "My First Novel";
   });
+  const [editingTitle, setEditingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // AI Usage tracking
   const [totalAiRequests, setTotalAiRequests] = useState<number>(() => {
     const stored = localStorage.getItem("ichen_ai_usage");
     if (stored) {
       const data = JSON.parse(stored);
-      // Reset if date is different
       if (data.date !== new Date().toDateString()) {
         return 0;
       }
@@ -60,29 +59,16 @@ const Editor = () => {
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
 
-  const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem("ichen_gemini_key", key);
-    setSettingsOpen(false);
-  };
-
   const incrementAiUsage = () => {
     const newCount = totalAiRequests + 1;
     setTotalAiRequests(newCount);
     localStorage.setItem(
       "ichen_ai_usage",
-      JSON.stringify({
-        count: newCount,
-        date: new Date().toDateString(),
-      })
+      JSON.stringify({ count: newCount, date: new Date().toDateString() })
     );
   };
 
-  const addFeedbackToHistory = (
-    persona: string,
-    selectedTextStr: string,
-    feedback: string
-  ) => {
+  const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedback: string) => {
     const newRecord: FeedbackRecord = {
       id: Date.now().toString(),
       persona,
@@ -90,7 +76,6 @@ const Editor = () => {
       selectedText: selectedTextStr,
       feedback,
     };
-
     const updated = [newRecord, ...feedbackHistory].slice(0, 5);
     setFeedbackHistory(updated);
     localStorage.setItem("ichen_feedback_history", JSON.stringify(updated));
@@ -118,17 +103,9 @@ const Editor = () => {
 
   const handleEditorChange = (content: string) => {
     setChapters((prev) =>
-      prev.map((ch) =>
-        ch.id === currentChapterId ? { ...ch, content } : ch
-      )
+      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, content } : ch))
     );
-
-    // Clear existing timeout
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-
-    // Set new timeout for debounced save
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(() => {
       console.log("Auto-saving...");
       setLastSaved(new Date());
@@ -136,11 +113,8 @@ const Editor = () => {
   };
 
   useEffect(() => {
-    // Cleanup timeout on unmount
     return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
   }, []);
 
@@ -149,20 +123,13 @@ const Editor = () => {
       const selection = window.getSelection();
       if (selection) {
         const text = selection.toString().trim();
-        if (text.length > 10) {
-          setSelectedText(text);
-        } else {
-          setSelectedText("");
-        }
+        setSelectedText(text.length > 10 ? text : "");
       }
     };
 
     const handleClickOrType = () => {
-      // Clear selection when user clicks elsewhere or starts typing
       const selection = window.getSelection();
-      if (!selection || selection.toString().length === 0) {
-        setSelectedText("");
-      }
+      if (!selection || selection.toString().length === 0) setSelectedText("");
     };
 
     document.addEventListener("selectionchange", handleSelectionChange);
@@ -184,36 +151,36 @@ const Editor = () => {
     }
     const updated = chapters.filter((ch) => ch.id !== chapterId);
     setChapters(updated);
-    if (currentChapterId === chapterId) {
-      setCurrentChapterId(updated[0].id);
-    }
+    if (currentChapterId === chapterId) setCurrentChapterId(updated[0].id);
   };
 
   const handleWordCountChange = (wordCount: number) => {
     setChapters((prev) =>
-      prev.map((ch) =>
-        ch.id === currentChapterId ? { ...ch, wordCount } : ch
-      )
+      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch))
     );
   };
 
+  const handleTitleSave = () => {
+    const trimmed = bookTitle.trim();
+    if (trimmed) {
+      setBookTitle(trimmed);
+      localStorage.setItem("ichen_book_title", trimmed);
+    } else {
+      setBookTitle("My First Novel");
+      localStorage.setItem("ichen_book_title", "My First Novel");
+    }
+    setEditingTitle(false);
+  };
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* API Key Missing Banner */}
-      {!apiKey && (
-        <div
-          onClick={() => setSettingsOpen(true)}
-          className="bg-amber-50 border-b border-amber-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
-        >
-          <p className="text-xs sm:text-sm text-amber-900 truncate mr-2">
-            Add your Gemini API key to enable AI features
-          </p>
-          <button className="text-xs sm:text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap shrink-0">
-            Configure →
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <header className="h-12 sm:h-16 min-h-[48px] sm:min-h-[64px] bg-background border-b flex items-center justify-between px-2 sm:px-4 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -226,7 +193,31 @@ const Editor = () => {
           </button>
           <img src="/logo.png" alt="ICHEN Manuscript" className="h-8 sm:h-10 w-auto shrink-0" />
           <div className="w-px h-5 sm:h-6 bg-border hidden sm:block" />
-          <span className="text-foreground text-sm truncate hidden sm:inline">My First Novel</span>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={bookTitle}
+              onChange={(e) => setBookTitle(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleTitleSave();
+                if (e.key === "Escape") {
+                  setBookTitle(localStorage.getItem("ichen_book_title") || "My First Novel");
+                  setEditingTitle(false);
+                }
+              }}
+              className="text-foreground text-sm bg-transparent border-b border-primary outline-none px-1 py-0.5 hidden sm:inline max-w-[200px]"
+            />
+          ) : (
+            <button
+              onClick={() => setEditingTitle(true)}
+              className="group flex items-center gap-1.5 text-foreground text-sm truncate hidden sm:inline-flex hover:text-primary transition-colors"
+              title="Click to edit book title"
+            >
+              <span className="truncate">{bookTitle}</span>
+              <Pencil size={12} className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {lastSaved && (
@@ -234,9 +225,6 @@ const Editor = () => {
               Saved {formatTime(lastSaved)}
             </span>
           )}
-          <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted" onClick={() => setSettingsOpen(true)} title="Settings">
-            <Settings size={16} />
-          </button>
           <button className="hidden sm:inline-flex px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
             Export
           </button>
@@ -286,9 +274,7 @@ const Editor = () => {
                     <p className="text-sm font-medium text-foreground truncate">{chapter.title}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {chapter.isComplete && (
-                      <Check className="h-4 w-4 text-green-600" />
-                    )}
+                    {chapter.isComplete && <Check className="h-4 w-4 text-green-600" />}
                     <button
                       onClick={(e) => handleDeleteChapter(e, chapter.id)}
                       className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
@@ -343,7 +329,7 @@ const Editor = () => {
         <main className="flex-1 bg-muted/30 overflow-hidden flex flex-col">
           {currentChapter ? (
             <>
-              {/* Chapter header - outside the canvas */}
+              {/* Chapter header */}
               <div className="px-6 py-3 border-b border-border bg-muted/50">
                 <h1 className="text-base font-semibold text-foreground">{currentChapter.title}</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -351,7 +337,7 @@ const Editor = () => {
                 </p>
               </div>
 
-              {/* Editor canvas - Word-like blank page */}
+              {/* Editor canvas */}
               <div className="flex-1 overflow-y-auto flex justify-center py-4 sm:py-8 px-2 sm:px-0">
                 <div className="w-full max-w-[800px]">
                   <LexicalEditor
@@ -364,8 +350,8 @@ const Editor = () => {
               </div>
             </>
           ) : (
-              <p className="text-muted-foreground p-6">Select a chapter to start writing</p>
-            )}
+            <p className="text-muted-foreground p-6">Select a chapter to start writing</p>
+          )}
         </main>
 
         {/* Right Sidebar Overlay on mobile */}
@@ -450,7 +436,6 @@ const Editor = () => {
                 <div className="mb-4">
                   <AiFeedbackPanel
                     selectedText={selectedText}
-                    apiKey={apiKey}
                     totalAiRequests={totalAiRequests}
                     aiRequestLimit={10}
                     onApplySuggestion={(text) => {
@@ -482,7 +467,6 @@ const Editor = () => {
             {rightTab === "heatmap" && (
               <EmotionHeatmap
                 chapterContent={currentChapter?.content || ""}
-                apiKey={apiKey}
                 onAnalyze={incrementAiUsage}
               />
             )}
@@ -490,7 +474,6 @@ const Editor = () => {
             {rightTab === "ghost" && (
               <GhostReader
                 chapterContent={currentChapter?.content || ""}
-                apiKey={apiKey}
                 onAnalyze={incrementAiUsage}
               />
             )}
@@ -498,7 +481,6 @@ const Editor = () => {
             {rightTab === "branch" && (
               <WhatIfBranching
                 selectedText={selectedText}
-                apiKey={apiKey}
                 onApply={(text) => {
                   console.log("Apply branch:", text);
                 }}
@@ -509,21 +491,12 @@ const Editor = () => {
             {rightTab === "bible" && (
               <StoryBible
                 chapterContent={currentChapter?.content || ""}
-                apiKey={apiKey}
                 onAnalyze={incrementAiUsage}
               />
             )}
           </div>
         </aside>
       </div>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onSave={handleSaveApiKey}
-        initialApiKey={apiKey}
-      />
     </div>
   );
 };

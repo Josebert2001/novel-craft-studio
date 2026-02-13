@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, Eye } from "lucide-react";
-import { analyzeText } from "../lib/gemini";
+import { analyzeText, getApiKeyStatus } from "../lib/gemini";
 
 interface ReadingPoint {
   paragraph: number;
@@ -11,7 +11,6 @@ interface ReadingPoint {
 
 interface GhostReaderProps {
   chapterContent: string;
-  apiKey: string;
   onAnalyze?: () => void;
 }
 
@@ -36,14 +35,16 @@ Return ONLY a JSON array:
 
 Be honest and critical. A real reader would get bored or confused sometimes.`;
 
-export default function GhostReader({ chapterContent, apiKey, onAnalyze }: GhostReaderProps) {
+export default function GhostReader({ chapterContent, onAnalyze }: GhostReaderProps) {
   const [points, setPoints] = useState<ReadingPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const hasApiKey = getApiKeyStatus();
+
   const analyze = async () => {
-    if (!apiKey || !chapterContent.trim()) {
-      setError(!apiKey ? "Configure API key first" : "No content to analyze");
+    if (!hasApiKey || !chapterContent.trim()) {
+      setError(!hasApiKey ? "API key not configured" : "No content to analyze");
       return;
     }
 
@@ -83,7 +84,7 @@ export default function GhostReader({ chapterContent, apiKey, onAnalyze }: Ghost
         </h3>
         <button
           onClick={analyze}
-          disabled={loading || !apiKey}
+          disabled={loading || !hasApiKey}
           className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Simulate"}
@@ -94,7 +95,6 @@ export default function GhostReader({ chapterContent, apiKey, onAnalyze }: Ghost
 
       {points.length > 0 && (
         <>
-          {/* Engagement Score */}
           <div className="bg-background border border-border rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground mb-1">Reader Engagement Score</p>
             <p className={`text-2xl font-bold ${
@@ -117,7 +117,6 @@ export default function GhostReader({ chapterContent, apiKey, onAnalyze }: Ghost
             </div>
           </div>
 
-          {/* Legend */}
           <div className="flex flex-wrap gap-2 justify-center">
             {Object.entries(ENGAGEMENT_CONFIG).map(([key, val]) => (
               <span key={key} className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -126,7 +125,6 @@ export default function GhostReader({ chapterContent, apiKey, onAnalyze }: Ghost
             ))}
           </div>
 
-          {/* Point-by-point */}
           <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
             {points.map((p) => {
               const config = ENGAGEMENT_CONFIG[p.engagement] || ENGAGEMENT_CONFIG.neutral;
@@ -137,10 +135,7 @@ export default function GhostReader({ chapterContent, apiKey, onAnalyze }: Ghost
                     <span className="text-xs font-medium text-foreground">¶{p.paragraph}</span>
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                      style={{
-                        background: config.color + "20",
-                        color: config.color,
-                      }}
+                      style={{ background: config.color + "20", color: config.color }}
                     >
                       {config.label}
                     </span>

@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Loader2, X, Check, Copy } from "lucide-react";
 import { AI_PERSONAS, AiPersona } from "../config/aiPersonas";
-import { analyzeText } from "../lib/gemini";
+import { analyzeText, getApiKeyStatus } from "../lib/gemini";
 
 interface AiFeedbackPanelProps {
   selectedText: string;
-  apiKey?: string;
   totalAiRequests?: number;
   aiRequestLimit?: number;
   onApplySuggestion?: (text: string) => void;
@@ -15,7 +14,6 @@ interface AiFeedbackPanelProps {
 
 export default function AiFeedbackPanel({
   selectedText,
-  apiKey = "",
   totalAiRequests = 0,
   aiRequestLimit = 10,
   onApplySuggestion,
@@ -28,27 +26,23 @@ export default function AiFeedbackPanel({
   const [error, setError] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
+  const hasApiKey = getApiKeyStatus();
   const personas = Object.values(AI_PERSONAS);
 
   const handlePersonaClick = async (persona: AiPersona) => {
-    // Check if API key is configured
-    if (!apiKey) {
-      setError("Please configure your Gemini API key in Settings.");
+    if (!hasApiKey) {
+      setError("API key not configured. Contact the administrator.");
       return;
     }
 
-    // Check if usage limit is reached
     if (totalAiRequests >= aiRequestLimit) {
       setError(`Daily analysis limit reached (${aiRequestLimit}/day). Upgrade to continue.`);
       return;
     }
 
     if (activePersona === persona.id && feedback) {
-      // If clicking the same persona, allow re-analysis
-      // Reset to allow new analysis
       setFeedback("");
     } else {
-      // New persona selected or first analysis
       setActivePersona(persona.id);
     }
 
@@ -64,8 +58,7 @@ export default function AiFeedbackPanel({
     try {
       const response = await analyzeText(selectedText, persona.systemPrompt);
       
-      // Check if response is an error message (from analyzeText error handling)
-      if (response.includes("Please configure") || response.includes("Invalid API key")) {
+      if (response.includes("API key not configured") || response.includes("Invalid API key")) {
         setError(response);
         return;
       }
@@ -99,43 +92,20 @@ export default function AiFeedbackPanel({
   };
 
   const detectIfRewrite = (text: string): boolean => {
-    // Check if feedback contains quotes (suggested text) or code blocks
-    return (
-      text.includes('"') ||
-      text.includes("'") ||
-      text.includes("`") ||
-      text.includes("**")
-    );
+    return text.includes('"') || text.includes("'") || text.includes("`") || text.includes("**");
   };
 
   const extractRewriteFromFeedback = (text: string): string => {
-    // Try to extract text in quotes
     const quoteMatch = text.match(/"([^"]+)"/);
-    if (quoteMatch && quoteMatch[1]) {
-      return quoteMatch[1];
-    }
-
-    // Try to extract text in backticks
+    if (quoteMatch && quoteMatch[1]) return quoteMatch[1];
     const backtickMatch = text.match(/`([^`]+)`/);
-    if (backtickMatch && backtickMatch[1]) {
-      return backtickMatch[1];
-    }
-
-    // If no specific extraction, return first 100 chars with asterisks removed
+    if (backtickMatch && backtickMatch[1]) return backtickMatch[1];
     return text.replace(/\*\*/g, "").substring(0, 150).trim();
   };
 
-  const textPreview =
-    selectedText.length > 100
-      ? selectedText.substring(0, 100) + "..."
-      : selectedText;
+  const textPreview = selectedText.length > 100 ? selectedText.substring(0, 100) + "..." : selectedText;
 
-  const getPersonaColor = (
-    color: string
-  ): {
-    border: string;
-    bg: string;
-  } => {
+  const getPersonaColor = (color: string): { border: string; bg: string } => {
     const colors: Record<string, { border: string; bg: string }> = {
       blue: { border: "border-blue-500", bg: "bg-blue-50" },
       red: { border: "border-red-500", bg: "bg-red-50" },
@@ -153,7 +123,6 @@ export default function AiFeedbackPanel({
         </p>
       ) : (
         <div className="space-y-4">
-          {/* Text Preview */}
           <div>
             <p className="text-xs text-muted-foreground mb-2">
               {selectedText.length} characters selected
@@ -163,12 +132,11 @@ export default function AiFeedbackPanel({
             </p>
           </div>
 
-          {/* Persona Buttons Grid */}
           <div className="grid grid-cols-2 gap-2">
             {personas.map((persona) => {
               const disabledReason =
-                !apiKey
-                  ? "Configure API key in Settings"
+                !hasApiKey
+                  ? "API key not configured"
                   : totalAiRequests >= aiRequestLimit
                     ? `Daily limit reached (${aiRequestLimit}/day)`
                     : null;
@@ -188,25 +156,19 @@ export default function AiFeedbackPanel({
                   }`}
                 >
                   <div className="text-lg mb-1">{persona.icon}</div>
-                  <div className="text-xs font-medium text-foreground">
-                    {persona.name}
-                  </div>
+                  <div className="text-xs font-medium text-foreground">{persona.name}</div>
                 </button>
               );
             })}
           </div>
 
-          {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">
-                Analyzing...
-              </span>
+              <span className="ml-2 text-sm text-muted-foreground">Analyzing...</span>
             </div>
           )}
 
-          {/* Error State */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded p-3">
               <p className="text-sm text-red-700">{error}</p>
@@ -216,9 +178,7 @@ export default function AiFeedbackPanel({
                     const personaKey = Object.keys(AI_PERSONAS).find(
                       (key) => AI_PERSONAS[key].id === activePersona
                     );
-                    if (personaKey) {
-                      handlePersonaClick(AI_PERSONAS[personaKey]);
-                    }
+                    if (personaKey) handlePersonaClick(AI_PERSONAS[personaKey]);
                   }}
                   className="mt-2 text-xs text-red-600 hover:text-red-700 underline"
                 >
@@ -228,7 +188,6 @@ export default function AiFeedbackPanel({
             </div>
           )}
 
-          {/* Feedback Card */}
           {feedback && (
             <div className="bg-white border border-border rounded p-3 shadow-sm">
               <div className="flex items-start justify-between mb-2">
@@ -240,21 +199,14 @@ export default function AiFeedbackPanel({
                     return personaKey ? AI_PERSONAS[personaKey].name + " Feedback" : "Feedback";
                   })()}
                 </p>
-                <button
-                  onClick={handleDismiss}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground transition-colors">
                   <X size={16} />
                 </button>
               </div>
-              <p className="text-sm text-foreground leading-relaxed mb-4">
-                {feedback}
-              </p>
+              <p className="text-sm text-foreground leading-relaxed mb-4">{feedback}</p>
 
-              {/* Action Buttons */}
               <div className="flex flex-col gap-2 border-t border-border pt-3">
                 <div className="flex gap-2">
-                  {/* Apply Suggestion Button */}
                   {detectIfRewrite(feedback) && (
                     <button
                       onClick={() => {
@@ -267,32 +219,15 @@ export default function AiFeedbackPanel({
                       Apply Suggestion
                     </button>
                   )}
-
-                  {/* Copy Feedback Button */}
                   <button
                     onClick={handleCopyFeedback}
                     className="flex items-center justify-center gap-1 px-3 py-2 border border-border text-xs font-medium text-foreground rounded hover:bg-muted transition-colors flex-1"
                   >
-                    {copied ? (
-                      <>
-                        <Check size={14} />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={14} />
-                        Copy
-                      </>
-                    )}
+                    {copied ? (<><Check size={14} /> Copied!</>) : (<><Copy size={14} /> Copy</>)}
                   </button>
                 </div>
-
-                {/* Dismiss Button and Try Another */}
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleDismiss}
-                    className="flex-1 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
-                  >
+                  <button onClick={handleDismiss} className="flex-1 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors">
                     Dismiss
                   </button>
                   <button
@@ -300,9 +235,7 @@ export default function AiFeedbackPanel({
                       const personaKey = Object.keys(AI_PERSONAS).find(
                         (key) => AI_PERSONAS[key].id === activePersona
                       );
-                      if (personaKey) {
-                        handlePersonaClick(AI_PERSONAS[personaKey]);
-                      }
+                      if (personaKey) handlePersonaClick(AI_PERSONAS[personaKey]);
                     }}
                     disabled={loading}
                     className="flex-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors underline disabled:opacity-50"
