@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, BookOpen, User, MapPin, Clock, ChevronDown, ChevronRight } from "lucide-react";
-import { analyzeText } from "../lib/gemini";
+import { analyzeText, getApiKeyStatus } from "../lib/gemini";
 
 interface Character {
   name: string;
@@ -29,7 +29,6 @@ interface StoryBibleData {
 
 interface StoryBibleProps {
   chapterContent: string;
-  apiKey: string;
   onAnalyze?: () => void;
 }
 
@@ -44,7 +43,7 @@ Return ONLY JSON:
 
 If none found for a category, return an empty array. Be thorough.`;
 
-export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryBibleProps) {
+export default function StoryBible({ chapterContent, onAnalyze }: StoryBibleProps) {
   const [data, setData] = useState<StoryBibleData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,9 +53,11 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
     timeline: false,
   });
 
+  const hasApiKey = getApiKeyStatus();
+
   const analyze = async () => {
-    if (!apiKey || !chapterContent.trim()) {
-      setError(!apiKey ? "Configure API key first" : "No content to analyze");
+    if (!hasApiKey || !chapterContent.trim()) {
+      setError(!hasApiKey ? "API key not configured" : "No content to analyze");
       return;
     }
 
@@ -90,7 +91,7 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
         </h3>
         <button
           onClick={analyze}
-          disabled={loading || !apiKey}
+          disabled={loading || !hasApiKey}
           className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Extract"}
@@ -101,17 +102,11 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
 
       {data && (
         <div className="space-y-2">
-          {/* Characters */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => toggle("characters")}
-              className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left"
-            >
+            <button onClick={() => toggle("characters")} className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left">
               {expanded.characters ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               <User className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-foreground">
-                Characters ({data.characters.length})
-              </span>
+              <span className="text-xs font-medium text-foreground">Characters ({data.characters.length})</span>
             </button>
             {expanded.characters && (
               <div className="border-t border-border">
@@ -124,12 +119,7 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
                       <p className="text-[10px] text-muted-foreground mt-0.5">{c.description}</p>
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {c.traits.map((t, j) => (
-                          <span
-                            key={j}
-                            className="px-1.5 py-0.5 text-[9px] rounded-full bg-primary/10 text-primary font-medium"
-                          >
-                            {t}
-                          </span>
+                          <span key={j} className="px-1.5 py-0.5 text-[9px] rounded-full bg-primary/10 text-primary font-medium">{t}</span>
                         ))}
                       </div>
                     </div>
@@ -139,17 +129,11 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
             )}
           </div>
 
-          {/* Locations */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => toggle("locations")}
-              className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left"
-            >
+            <button onClick={() => toggle("locations")} className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left">
               {expanded.locations ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-foreground">
-                Locations ({data.locations.length})
-              </span>
+              <span className="text-xs font-medium text-foreground">Locations ({data.locations.length})</span>
             </button>
             {expanded.locations && (
               <div className="border-t border-border">
@@ -160,9 +144,7 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
                     <div key={i} className="p-2.5 border-b border-border last:border-b-0">
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-semibold text-foreground">{l.name}</p>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground">
-                          {l.atmosphere}
-                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground">{l.atmosphere}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{l.description}</p>
                     </div>
@@ -172,17 +154,11 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
             )}
           </div>
 
-          {/* Timeline */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => toggle("timeline")}
-              className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left"
-            >
+            <button onClick={() => toggle("timeline")} className="w-full flex items-center gap-2 p-2.5 bg-background hover:bg-muted/50 transition-colors text-left">
               {expanded.timeline ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               <Clock className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-foreground">
-                Timeline ({data.timeline.length})
-              </span>
+              <span className="text-xs font-medium text-foreground">Timeline ({data.timeline.length})</span>
             </button>
             {expanded.timeline && (
               <div className="border-t border-border">
@@ -191,15 +167,11 @@ export default function StoryBible({ chapterContent, apiKey, onAnalyze }: StoryB
                 ) : (
                   data.timeline.map((e, i) => (
                     <div key={i} className="p-2.5 border-b border-border last:border-b-0 flex gap-2">
-                      <span className="text-[10px] font-bold text-muted-foreground shrink-0 w-4 text-right">
-                        {e.order}
-                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground shrink-0 w-4 text-right">{e.order}</span>
                       <div>
                         <p className="text-[11px] text-foreground">{e.event}</p>
                         {e.characters.length > 0 && (
-                          <p className="text-[9px] text-muted-foreground mt-0.5">
-                            {e.characters.join(", ")}
-                          </p>
+                          <p className="text-[9px] text-muted-foreground mt-0.5">{e.characters.join(", ")}</p>
                         )}
                       </div>
                     </div>

@@ -14,7 +14,6 @@ interface EmotionData {
 
 interface EmotionHeatmapProps {
   chapterContent: string;
-  apiKey: string;
   onAnalyze?: () => void;
 }
 
@@ -32,14 +31,16 @@ Return ONLY a JSON array like:
 
 Include every paragraph. Be precise with scores.`;
 
-export default function EmotionHeatmap({ chapterContent, apiKey, onAnalyze }: EmotionHeatmapProps) {
+export default function EmotionHeatmap({ chapterContent, onAnalyze }: EmotionHeatmapProps) {
   const [emotions, setEmotions] = useState<EmotionData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const hasApiKey = getApiKeyStatus();
+
   const analyze = async () => {
-    if (!apiKey || !chapterContent.trim()) {
-      setError(!apiKey ? "Configure API key first" : "No content to analyze");
+    if (!hasApiKey || !chapterContent.trim()) {
+      setError(!hasApiKey ? "API key not configured" : "No content to analyze");
       return;
     }
 
@@ -81,7 +82,7 @@ export default function EmotionHeatmap({ chapterContent, apiKey, onAnalyze }: Em
         </h3>
         <button
           onClick={analyze}
-          disabled={loading || !apiKey}
+          disabled={loading || !hasApiKey}
           className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Analyze"}
@@ -92,17 +93,13 @@ export default function EmotionHeatmap({ chapterContent, apiKey, onAnalyze }: Em
 
       {emotions.length > 0 && (
         <>
-          {/* Arc Chart */}
           <div className="bg-background border border-border rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-2">Emotional Arc</p>
             <ResponsiveContainer width="100%" height={120}>
               <AreaChart data={emotions}>
                 <XAxis dataKey="paragraph" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, borderRadius: 8 }}
-                  labelFormatter={(v) => `¶${v}`}
-                />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} labelFormatter={(v) => `¶${v}`} />
                 <Area type="monotone" dataKey="joy" stroke={EMOTION_COLORS.joy} fill={EMOTION_COLORS.joy} fillOpacity={0.2} strokeWidth={1.5} />
                 <Area type="monotone" dataKey="tension" stroke={EMOTION_COLORS.tension} fill={EMOTION_COLORS.tension} fillOpacity={0.2} strokeWidth={1.5} />
                 <Area type="monotone" dataKey="sadness" stroke={EMOTION_COLORS.sadness} fill={EMOTION_COLORS.sadness} fillOpacity={0.2} strokeWidth={1.5} />
@@ -119,19 +116,12 @@ export default function EmotionHeatmap({ chapterContent, apiKey, onAnalyze }: Em
             </div>
           </div>
 
-          {/* Paragraph Breakdown */}
           <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
             {emotions.map((d) => {
               const dominant = getDominantEmotion(d);
               return (
-                <div
-                  key={d.paragraph}
-                  className="flex items-center gap-2 p-2 rounded border border-border bg-background"
-                >
-                  <span
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ background: EMOTION_COLORS[dominant] }}
-                  />
+                <div key={d.paragraph} className="flex items-center gap-2 p-2 rounded border border-border bg-background">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: EMOTION_COLORS[dominant] }} />
                   <div className="min-w-0 flex-1">
                     <span className="text-xs font-medium text-foreground">¶{d.paragraph}</span>
                     <span className="text-[10px] text-muted-foreground ml-1.5">{d.label}</span>
