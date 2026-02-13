@@ -6,13 +6,12 @@ const Index = () => {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="text-center max-w-2xl">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <img src="/logo.png" alt="Novel Craft Studio" className="h-12 w-12" />
-          <h1 className="text-5xl font-bold text-foreground">Novel Craft Studio</h1>
+          <img src="/logo.png" alt="ICHEN Manuscript" className="h-12 w-12" />
+          <h1 className="text-5xl font-bold text-foreground">ICHEN Manuscript</h1>
         </div>
         
         <p className="text-xl text-muted-foreground mb-8">
-          A distraction-free writing environment designed for novelists and authors. 
-          Write your story with beautiful formatting, real-time word counts, and smart shortcuts.
+          The AI editor that walks beside you.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
