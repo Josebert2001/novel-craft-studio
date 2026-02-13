@@ -1,49 +1,44 @@
 
+# Editable Book Title + Remove Frontend API Key Prompt
 
-# Color Scheme Update
+Two changes: make the book title editable in the header, and remove all frontend API key input since the key will be provided via environment variable (`VITE_GEMINI_API_KEY`).
 
-Updating the design system to use the specified brand palette across the entire application.
+## 1. Editable Book Title
 
-## Color Mapping
+**`src/pages/Editor.tsx`**:
+- Add state: `const [bookTitle, setBookTitle] = useState("My First Novel")` (persisted to `localStorage` under `ichen_book_title`)
+- Replace the static `<span>My First Novel</span>` in the header (line 229) with an inline-editable input that:
+  - Displays as plain text normally (click to edit)
+  - On click, becomes an `<input>` field
+  - On blur or Enter, saves the new title back to state and localStorage
+  - Shows a subtle pencil icon on hover to hint editability
 
-| Role | Current | New | Hex |
-|------|---------|-----|-----|
-| Primary | Blue-600 | Deep Blue | #1e40af |
-| Accent/Secondary | Gray tones | Warm Gold | #f59e0b |
-| Muted/Gray | Default gray | Soft Gray | #6b7280 |
-| Background | Pure white | Off-white | #fafaf9 |
+## 2. Remove Frontend API Key Prompt
 
-## Files to Change
+Since the Gemini API key will be set as `VITE_GEMINI_API_KEY` in Vercel deployment secrets, we remove the user-facing key input:
 
-### 1. `src/index.css` -- CSS Custom Properties (Light Mode)
+**`src/pages/Editor.tsx`**:
+- Remove the `apiKey` state variable and `handleSaveApiKey` function
+- Remove the amber "API Key Missing" banner (lines 202-215)
+- Remove the Settings button from the header (line 237-239)
+- Remove the `<SettingsModal>` component usage
+- Remove the `SettingsModal` import
+- Update all `apiKey` prop references passed to child components -- pass empty string or remove prop (since `gemini.ts` already reads `VITE_GEMINI_API_KEY` from the environment)
 
-Update the `:root` variables to the new palette (all values converted to HSL):
+**`src/lib/gemini.ts`**:
+- Simplify `getApiKey()` to only read from `import.meta.env.VITE_GEMINI_API_KEY`
+- Remove the localStorage check for `ichen_gemini_key`
+- Update error messages to say "API key not configured" instead of "check Settings"
 
-- `--background`: 40 33% 98% (off-white #fafaf9)
-- `--foreground`: 224 71% 20% (deep navy for text contrast)
-- `--primary`: 224 72% 40% (deep blue #1e40af)
-- `--primary-foreground`: 0 0% 100% (white text on blue)
-- `--secondary`: 38 92% 50% (warm gold #f59e0b)
-- `--secondary-foreground`: 224 71% 15% (dark text on gold)
-- `--muted`: 40 20% 94% (light warm gray)
-- `--muted-foreground`: 220 9% 46% (soft gray #6b7280)
-- `--accent`: 38 92% 50% (gold accent)
-- `--accent-foreground`: 224 71% 15%
-- `--border`: 40 15% 88%
-- `--ring`: 224 72% 40%
-- `--card` and `--popover`: off-white to match background
-- Sidebar variables updated to complement the palette
+**`src/components/SettingsModal.tsx`**:
+- Delete this file entirely (no longer needed)
 
-Dark mode variables will also be adjusted to use darker variants of the same hues for consistency.
+**`src/components/AiFeedbackPanel.tsx`**, **`src/components/EmotionHeatmap.tsx`**, **`src/components/GhostReader.tsx`**, **`src/components/WhatIfBranching.tsx`**, **`src/components/StoryBible.tsx`**:
+- Remove `apiKey` prop from their interfaces if they accept it
+- Update internal logic to use `getApiKey()` / `getApiKeyStatus()` from `gemini.ts` directly instead of relying on a passed prop
 
-### 2. `src/App.css` -- Editor Styles
+## Technical Notes
 
-- Update `.lexical-content-editable` background from `white` to the off-white (`#fafaf9` / `hsl(40, 33%, 98%)`)
-- Update `.lexical-editor-container` background similarly
-
-### 3. `src/pages/Editor.tsx` -- Inline Color References
-
-- Verify and update any hardcoded color classes (e.g., `bg-white`) to use the design system tokens (`bg-background`) for consistency with the new palette
-
-No structural or behavioral changes -- purely a color/theming update.
-
+- The book title will persist in `localStorage` under key `ichen_book_title` so it survives page reloads
+- The env variable `VITE_GEMINI_API_KEY` is already supported in `gemini.ts` as a fallback -- we just make it the only source
+- No Supabase or backend changes needed for this step
