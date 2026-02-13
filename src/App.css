@@ -44,7 +44,7 @@
   position: relative;
   width: 100%;
   margin: 0 auto;
-  background-color: white;
+  background-color: hsl(40, 33%, 98%);
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -121,7 +121,7 @@
   border: none !important;
   box-shadow: none !important;
   color: hsl(var(--foreground));
-  background-color: white;
+  background-color: hsl(var(--background));
   flex: 1;
   overflow-y: auto;
   cursor: text;
