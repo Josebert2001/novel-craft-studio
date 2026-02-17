@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut } from "lucide-react";
+import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
@@ -19,9 +20,7 @@ interface Chapter {
   isComplete: boolean;
 }
 
-const initialChapters: Chapter[] = [
-  { id: "ch-1", title: "Chapter 1", wordCount: 0, content: "", isComplete: false },
-];
+type SyncStatus = "synced" | "syncing" | "local-only" | "loading";
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -31,19 +30,21 @@ const Editor = () => {
     await signOut();
     navigate("/auth", { replace: true });
   };
-  const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
-  const [currentChapterId, setCurrentChapterId] = useState("ch-1");
+
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [currentChapterId, setCurrentChapterId] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible">("coach");
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
+  const [bookId, setBookId] = useState<string | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   // Editable book title
-  const [bookTitle, setBookTitle] = useState<string>(() => {
-    return localStorage.getItem("ichen_book_title") || "My First Novel";
-  });
+  const [bookTitle, setBookTitle] = useState<string>("My First Novel");
   const [editingTitle, setEditingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,9 +53,7 @@ const Editor = () => {
     const stored = localStorage.getItem("ichen_ai_usage");
     if (stored) {
       const data = JSON.parse(stored);
-      if (data.date !== new Date().toDateString()) {
-        return 0;
-      }
+      if (data.date !== new Date().toDateString()) return 0;
       return data.count || 0;
     }
     return 0;
@@ -68,13 +67,312 @@ const Editor = () => {
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
 
+  // ─── Load data from Supabase on mount ───
+  useEffect(() => {
+    isMountedRef.current = true;
+    if (!user) return;
+
+    const loadFromSupabase = async () => {
+      setSyncStatus("loading");
+      try {
+        // 1. Find or create book
+        let { data: books, error: booksErr } = await supabase
+          .from("books")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (booksErr) throw booksErr;
+
+        let currentBookId: string;
+        if (books && books.length > 0) {
+          currentBookId = books[0].id;
+          if (isMountedRef.current) setBookTitle(books[0].title);
+        } else {
+          const title = localStorage.getItem("ichen_book_title") || "My First Novel";
+          const { data: newBook, error: insertErr } = await supabase
+            .from("books")
+            .insert({ user_id: user.id, title })
+            .select()
+            .single();
+          if (insertErr || !newBook) throw insertErr || new Error("Failed to create book");
+          currentBookId = newBook.id;
+          if (isMountedRef.current) setBookTitle(newBook.title);
+        }
+
+        if (isMountedRef.current) setBookId(currentBookId);
+
+        // 2. Load chapters from Supabase
+        const { data: dbChapters, error: chapErr } = await supabase
+          .from("chapters")
+          .select("*")
+          .eq("book_id", currentBookId)
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true });
+
+        if (chapErr) throw chapErr;
+
+        if (dbChapters && dbChapters.length > 0) {
+          const mapped: Chapter[] = dbChapters.map((ch) => ({
+            id: ch.id,
+            title: ch.title,
+            wordCount: ch.word_count ?? 0,
+            content: ch.content ?? "",
+            isComplete: false,
+          }));
+          if (isMountedRef.current) {
+            setChapters(mapped);
+            setCurrentChapterId(mapped[0].id);
+            setSyncStatus("synced");
+          }
+        } else {
+          // No chapters in DB — create first chapter
+          const { data: newChap, error: newChapErr } = await supabase
+            .from("chapters")
+            .insert({
+              book_id: currentBookId,
+              user_id: user.id,
+              title: "Chapter 1",
+              content: "",
+              word_count: 0,
+              sort_order: 0,
+            })
+            .select()
+            .single();
+
+          if (newChapErr || !newChap) throw newChapErr || new Error("Failed to create chapter");
+
+          const ch: Chapter = {
+            id: newChap.id,
+            title: newChap.title,
+            wordCount: 0,
+            content: "",
+            isComplete: false,
+          };
+          if (isMountedRef.current) {
+            setChapters([ch]);
+            setCurrentChapterId(ch.id);
+            setSyncStatus("synced");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load from Supabase:", err);
+        // Fallback: use localStorage if available
+        if (isMountedRef.current) {
+          setSyncStatus("local-only");
+          const fallbackTitle = localStorage.getItem("ichen_book_title") || "My First Novel";
+          setBookTitle(fallbackTitle);
+          setChapters([{ id: "ch-1", title: "Chapter 1", wordCount: 0, content: "", isComplete: false }]);
+          setCurrentChapterId("ch-1");
+        }
+      }
+    };
+
+    loadFromSupabase();
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [user]);
+
+  // ─── Supabase save function ───
+  const saveToSupabase = useCallback(
+    async (chapterId: string, content: string, wordCount: number) => {
+      if (!user) return;
+      setSyncStatus("syncing");
+      try {
+        const { error } = await supabase
+          .from("chapters")
+          .update({
+            content,
+            word_count: wordCount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", chapterId)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+        if (isMountedRef.current) {
+          setSyncStatus("synced");
+          setLastSaved(new Date());
+        }
+      } catch (err) {
+        console.error("Supabase save failed:", err);
+        if (isMountedRef.current) setSyncStatus("local-only");
+      }
+    },
+    [user]
+  );
+
+  // ─── Editor change handler with dual save ───
+  const handleEditorChange = (content: string) => {
+    const chapterId = currentChapterId;
+    setChapters((prev) =>
+      prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch))
+    );
+
+    // localStorage backup (instant)
+    localStorage.setItem(`chapter_${chapterId}`, content);
+
+    // Debounced Supabase save
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      const chapter = chapters.find((ch) => ch.id === chapterId);
+      const wc = chapter?.wordCount ?? 0;
+      saveToSupabase(chapterId, content, wc);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    };
+  }, []);
+
+  // ─── Save on blur / beforeunload ───
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentChapter) {
+        localStorage.setItem(`chapter_${currentChapter.id}`, currentChapter.content);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [currentChapter]);
+
+  // ─── Selection tracking ───
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection) {
+        const text = selection.toString().trim();
+        setSelectedText(text.length > 10 ? text : "");
+      }
+    };
+    const handleClickOrType = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.toString().length === 0) setSelectedText("");
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    document.addEventListener("click", handleClickOrType);
+    document.addEventListener("keydown", handleClickOrType);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("click", handleClickOrType);
+      document.removeEventListener("keydown", handleClickOrType);
+    };
+  }, []);
+
+  // ─── Chapter actions ───
+  const handleAddChapter = async () => {
+    if (!user || !bookId) return;
+    const sortOrder = chapters.length;
+    const title = `Chapter ${chapters.length + 1}`;
+
+    try {
+      const { data: newChap, error } = await supabase
+        .from("chapters")
+        .insert({
+          book_id: bookId,
+          user_id: user.id,
+          title,
+          content: "",
+          word_count: 0,
+          sort_order: sortOrder,
+        })
+        .select()
+        .single();
+
+      if (error || !newChap) throw error || new Error("Failed to create chapter");
+
+      const ch: Chapter = {
+        id: newChap.id,
+        title: newChap.title,
+        wordCount: 0,
+        content: "",
+        isComplete: false,
+      };
+      setChapters((prev) => [...prev, ch]);
+      setCurrentChapterId(ch.id);
+    } catch (err) {
+      console.error("Failed to add chapter:", err);
+      // Fallback: local-only chapter
+      const localCh: Chapter = {
+        id: "ch-" + Date.now(),
+        title,
+        wordCount: 0,
+        content: "",
+        isComplete: false,
+      };
+      setChapters((prev) => [...prev, localCh]);
+      setCurrentChapterId(localCh.id);
+      setSyncStatus("local-only");
+    }
+  };
+
+  const handleDeleteChapter = async (e: React.MouseEvent, chapterId: string) => {
+    e.stopPropagation();
+    if (chapters.length <= 1) {
+      alert("You must have at least one chapter");
+      return;
+    }
+
+    // Optimistic UI update
+    const updated = chapters.filter((ch) => ch.id !== chapterId);
+    setChapters(updated);
+    if (currentChapterId === chapterId) setCurrentChapterId(updated[0].id);
+    localStorage.removeItem(`chapter_${chapterId}`);
+
+    // Delete from Supabase
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from("chapters")
+          .delete()
+          .eq("id", chapterId)
+          .eq("user_id", user.id);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to delete chapter from Supabase:", err);
+      }
+    }
+  };
+
+  const handleWordCountChange = (wordCount: number) => {
+    setChapters((prev) =>
+      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch))
+    );
+  };
+
+  // ─── Book title ───
+  const handleTitleSave = async () => {
+    const trimmed = bookTitle.trim() || "My First Novel";
+    setBookTitle(trimmed);
+    localStorage.setItem("ichen_book_title", trimmed);
+    setEditingTitle(false);
+
+    if (user && bookId) {
+      try {
+        await supabase.from("books").update({ title: trimmed }).eq("id", bookId).eq("user_id", user.id);
+      } catch (err) {
+        console.error("Failed to update book title:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
+
+  // ─── AI usage helpers ───
   const incrementAiUsage = () => {
     const newCount = totalAiRequests + 1;
     setTotalAiRequests(newCount);
-    localStorage.setItem(
-      "ichen_ai_usage",
-      JSON.stringify({ count: newCount, date: new Date().toDateString() })
-    );
+    localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: newCount, date: new Date().toDateString() }));
   };
 
   const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedback: string) => {
@@ -101,92 +399,52 @@ const Editor = () => {
     localStorage.removeItem("ichen_feedback_history");
   };
 
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    });
+  const formatTime = (date: Date): string =>
+    date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+
+  // ─── Sync status indicator ───
+  const renderSyncStatus = () => {
+    switch (syncStatus) {
+      case "syncing":
+        return (
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs text-amber-500">
+            <Loader2 size={12} className="animate-spin" /> Syncing...
+          </span>
+        );
+      case "synced":
+        return (
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs text-green-600">
+            <Cloud size={12} /> Synced {lastSaved ? formatTime(lastSaved) : ""}
+          </span>
+        );
+      case "local-only":
+        return (
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+            <CloudOff size={12} /> Local only
+          </span>
+        );
+      case "loading":
+        return (
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+            <Loader2 size={12} className="animate-spin" /> Loading...
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
-  const handleEditorChange = (content: string) => {
-    setChapters((prev) =>
-      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, content } : ch))
+  // Show loading state while data loads
+  if (syncStatus === "loading" && chapters.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm">Loading your manuscript...</p>
+        </div>
+      </div>
     );
-    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      console.log("Auto-saving...");
-      setLastSaved(new Date());
-    }, 2000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection) {
-        const text = selection.toString().trim();
-        setSelectedText(text.length > 10 ? text : "");
-      }
-    };
-
-    const handleClickOrType = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.toString().length === 0) setSelectedText("");
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-    document.addEventListener("click", handleClickOrType);
-    document.addEventListener("keydown", handleClickOrType);
-
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      document.removeEventListener("click", handleClickOrType);
-      document.removeEventListener("keydown", handleClickOrType);
-    };
-  }, []);
-
-  const handleDeleteChapter = (e: React.MouseEvent, chapterId: string) => {
-    e.stopPropagation();
-    if (chapters.length <= 1) {
-      alert("You must have at least one chapter");
-      return;
-    }
-    const updated = chapters.filter((ch) => ch.id !== chapterId);
-    setChapters(updated);
-    if (currentChapterId === chapterId) setCurrentChapterId(updated[0].id);
-  };
-
-  const handleWordCountChange = (wordCount: number) => {
-    setChapters((prev) =>
-      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch))
-    );
-  };
-
-  const handleTitleSave = () => {
-    const trimmed = bookTitle.trim();
-    if (trimmed) {
-      setBookTitle(trimmed);
-      localStorage.setItem("ichen_book_title", trimmed);
-    } else {
-      setBookTitle("My First Novel");
-      localStorage.setItem("ichen_book_title", "My First Novel");
-    }
-    setEditingTitle(false);
-  };
-
-  useEffect(() => {
-    if (editingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
-      titleInputRef.current.select();
-    }
-  }, [editingTitle]);
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -229,15 +487,18 @@ const Editor = () => {
           )}
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {lastSaved && (
-            <span className="text-[10px] sm:text-xs text-muted-foreground hidden md:inline">
-              Saved {formatTime(lastSaved)}
-            </span>
-          )}
+          <span className="hidden md:inline-flex">{renderSyncStatus()}</span>
           <button className="hidden sm:inline-flex px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
             Export
           </button>
-          <button className="px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
+          <button
+            onClick={() => {
+              if (currentChapter) {
+                saveToSupabase(currentChapter.id, currentChapter.content, currentChapter.wordCount);
+              }
+            }}
+            className="px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
+          >
             Save
           </button>
           {user && (
@@ -315,17 +576,7 @@ const Editor = () => {
 
           {/* Add Chapter Button */}
           <button
-            onClick={() => {
-              const newChapter: Chapter = {
-                id: "ch-" + Date.now(),
-                title: "Chapter " + (chapters.length + 1),
-                wordCount: 0,
-                content: "",
-                isComplete: false,
-              };
-              setChapters((prev) => [...prev, newChapter]);
-              setCurrentChapterId(newChapter.id);
-            }}
+            onClick={handleAddChapter}
             className="w-full p-3 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-200 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
