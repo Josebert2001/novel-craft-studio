@@ -65,8 +65,12 @@ export default function StoryBible({ chapterContent, onAnalyze }: StoryBibleProp
     setError("");
 
     try {
-      const result = await analyzeText(chapterContent, STORY_BIBLE_PROMPT);
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      const response = await analyzeText(chapterContent, STORY_BIBLE_PROMPT);
+      if (response.limitReached || response.error) {
+        setError(response.error || "Extraction failed.");
+        return;
+      }
+      const jsonMatch = (response.result || "").match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as StoryBibleData;
         setData(parsed);

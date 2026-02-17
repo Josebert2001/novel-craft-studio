@@ -52,8 +52,12 @@ export default function GhostReader({ chapterContent, onAnalyze }: GhostReaderPr
     setError("");
 
     try {
-      const result = await analyzeText(chapterContent, GHOST_READER_PROMPT);
-      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      const response = await analyzeText(chapterContent, GHOST_READER_PROMPT);
+      if (response.limitReached || response.error) {
+        setError(response.error || "Analysis failed.");
+        return;
+      }
+      const jsonMatch = (response.result || "").match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as ReadingPoint[];
         setPoints(parsed);
