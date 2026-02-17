@@ -44,8 +44,12 @@ export default function WhatIfBranching({ selectedText, onApply, onAnalyze }: Wh
     setBranches([]);
 
     try {
-      const result = await analyzeText(selectedText, BRANCH_PROMPT);
-      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      const response = await analyzeText(selectedText, BRANCH_PROMPT);
+      if (response.limitReached || response.error) {
+        setError(response.error || "Generation failed.");
+        return;
+      }
+      const jsonMatch = (response.result || "").match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as Branch[];
         setBranches(parsed);

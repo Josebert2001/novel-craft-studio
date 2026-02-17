@@ -84,35 +84,53 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Server-side rate limiting
+    // Server-side rate limiting using rate_limits table
     const userId = claimsData.claims.sub;
-    const today = new Date().toISOString().split("T")[0];
+    const DAILY_LIMIT = 10;
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: profile } = await adminClient
-      .from("profiles")
-      .select("ai_requests_count, ai_requests_reset_date")
-      .eq("id", userId)
+    const { data: rateLimit } = await adminClient
+      .from("rate_limits")
+      .select("request_count, window_start")
+      .eq("user_id", userId)
       .single();
 
-    const currentCount = (profile?.ai_requests_reset_date === today) ? (profile?.ai_requests_count || 0) : 0;
-    const DAILY_LIMIT = 50;
+    const now = new Date();
+    const windowStart = rateLimit?.window_start ? new Date(rateLimit.window_start) : null;
+    const hoursSinceWindow = windowStart ? (now.getTime() - windowStart.getTime()) / (1000 * 60 * 60) : 25;
+    const currentCount = (hoursSinceWindow < 24) ? (rateLimit?.request_count ?? 0) : 0;
+
+    // Calculate reset time (24h from window_start)
+    const resetAt = windowStart && hoursSinceWindow < 24
+      ? new Date(windowStart.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      : null;
 
     if (currentCount >= DAILY_LIMIT) {
       return new Response(
-        JSON.stringify({ error: "Daily AI request limit reached. Try again tomorrow." }),
+        JSON.stringify({
+          error: `Daily limit reached. You have used all ${DAILY_LIMIT} AI analyses today.`,
+          resetAt,
+          limitReached: true,
+        }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    await adminClient
-      .from("profiles")
-      .update({ ai_requests_count: currentCount + 1, ai_requests_reset_date: today })
-      .eq("id", userId);
+    // Upsert rate limit: reset window if expired, otherwise increment
+    if (!rateLimit || hoursSinceWindow >= 24) {
+      await adminClient
+        .from("rate_limits")
+        .upsert({ user_id: userId, request_count: 1, window_start: now.toISOString() });
+    } else {
+      await adminClient
+        .from("rate_limits")
+        .update({ request_count: currentCount + 1 })
+        .eq("user_id", userId);
+    }
 
     // Sanitize user input to mitigate prompt injection
     const sanitizedText = text.replace(/---/g, "—").replace(/SYSTEM/gi, "[SYSTEM]");

@@ -56,16 +56,22 @@ export default function AiFeedbackPanel({
     setFeedback("");
 
     try {
-      const response = await analyzeText(selectedText, persona.systemPrompt);
+      const result = await analyzeText(selectedText, persona.systemPrompt);
       
-      if (response.includes("API key not configured") || response.includes("Invalid API key")) {
-        setError(response);
+      if (result.limitReached) {
+        setError(result.error || "Daily AI limit reached. Resets tomorrow at midnight.");
         return;
       }
 
-      setFeedback(response);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      const responseText = result.result || "No response generated.";
+      setFeedback(responseText);
       setActivePersona(persona.id);
-      onAnalyze?.(persona.id, response);
+      onAnalyze?.(persona.id, responseText);
     } catch (err) {
       setError("Unable to analyze. Please try again.");
       console.error("Analysis error:", err);

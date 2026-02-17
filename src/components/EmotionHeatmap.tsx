@@ -48,8 +48,12 @@ export default function EmotionHeatmap({ chapterContent, onAnalyze }: EmotionHea
     setError("");
 
     try {
-      const result = await analyzeText(chapterContent, EMOTION_PROMPT);
-      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      const response = await analyzeText(chapterContent, EMOTION_PROMPT);
+      if (response.limitReached || response.error) {
+        setError(response.error || "Analysis failed.");
+        return;
+      }
+      const jsonMatch = (response.result || "").match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as EmotionData[];
         setEmotions(parsed);
