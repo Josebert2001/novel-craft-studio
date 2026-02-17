@@ -101,7 +101,10 @@ Deno.serve(async (req) => {
       .update({ ai_requests_count: currentCount + 1, ai_requests_reset_date: today })
       .eq("id", userId);
 
-    const fullPrompt = `${systemPrompt}\n\nAnalyze this text:\n\n${text}`;
+    // Sanitize user input to mitigate prompt injection
+    const sanitizedText = text.replace(/---/g, "—").replace(/SYSTEM/gi, "[SYSTEM]");
+    
+    const fullPrompt = `${systemPrompt}\n\n---USER TEXT BELOW---\n${sanitizedText}\n---END USER TEXT---\n\nProvide analysis following the system instruction above.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -115,10 +118,10 @@ Deno.serve(async (req) => {
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", errorText);
+      const errorCode = response.status;
+      console.error(`Gemini API returned status ${errorCode}`);
       return new Response(
-        JSON.stringify({ error: "Gemini API request failed" }),
+        JSON.stringify({ error: "AI service temporarily unavailable" }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -132,7 +135,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Edge function error:", error);
+    console.error("Edge function error: request failed");
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
