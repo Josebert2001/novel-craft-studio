@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS ai_requests_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS ai_requests_reset_date DATE DEFAULT CURRENT_DATE;
