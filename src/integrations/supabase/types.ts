@@ -84,18 +84,24 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_requests_count: number | null
+          ai_requests_reset_date: string | null
           created_at: string
           display_name: string | null
           email: string | null
           id: string
         }
         Insert: {
+          ai_requests_count?: number | null
+          ai_requests_reset_date?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
         }
         Update: {
+          ai_requests_count?: number | null
+          ai_requests_reset_date?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
