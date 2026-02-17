@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
@@ -22,6 +24,13 @@ const initialChapters: Chapter[] = [
 ];
 
 const Editor = () => {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth", { replace: true });
+  };
   const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
   const [currentChapterId, setCurrentChapterId] = useState("ch-1");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -231,6 +240,20 @@ const Editor = () => {
           <button className="px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
             Save
           </button>
+          {user && (
+            <div className="hidden sm:flex items-center gap-2 ml-1">
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                {user.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded hover:bg-destructive/10"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
             className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
