@@ -53,6 +53,54 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Input size validation
+    const MAX_TEXT_LENGTH = 50000;
+    const MAX_PROMPT_LENGTH = 2000;
+
+    if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Text too long. Maximum ${MAX_TEXT_LENGTH} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (typeof systemPrompt !== "string" || systemPrompt.length > MAX_PROMPT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `System prompt too long. Maximum ${MAX_PROMPT_LENGTH} characters allowed.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Server-side rate limiting
+    const userId = claimsData.claims.sub;
+    const today = new Date().toISOString().split("T")[0];
+
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("ai_requests_count, ai_requests_reset_date")
+      .eq("id", userId)
+      .single();
+
+    const currentCount = (profile?.ai_requests_reset_date === today) ? (profile?.ai_requests_count || 0) : 0;
+    const DAILY_LIMIT = 50;
+
+    if (currentCount >= DAILY_LIMIT) {
+      return new Response(
+        JSON.stringify({ error: "Daily AI request limit reached. Try again tomorrow." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    await adminClient
+      .from("profiles")
+      .update({ ai_requests_count: currentCount + 1, ai_requests_reset_date: today })
+      .eq("id", userId);
+
     const fullPrompt = `${systemPrompt}\n\nAnalyze this text:\n\n${text}`;
 
     const response = await fetch(
