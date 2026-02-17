@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff, Loader2, GripVertical } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import LexicalEditor from "../components/LexicalEditor";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
@@ -11,6 +12,7 @@ import EmotionHeatmap from "../components/EmotionHeatmap";
 import WhatIfBranching from "../components/WhatIfBranching";
 import GhostReader from "../components/GhostReader";
 import StoryBible from "../components/StoryBible";
+import { WelcomeModal } from "../components/WelcomeModal";
 
 interface Chapter {
   id: string;
@@ -47,6 +49,21 @@ const Editor = () => {
   const [bookTitle, setBookTitle] = useState<string>("My First Novel");
   const [editingTitle, setEditingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Chapter loading state
+  const [chapterLoading, setChapterLoading] = useState<"adding" | "deleting" | null>(null);
+
+  // Chapter title editing
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [editingChapterTitle, setEditingChapterTitle] = useState("");
+  const chapterTitleInputRef = useRef<HTMLInputElement>(null);
+
+  // Drag-and-drop
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Welcome modal
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // AI Usage tracking
   const [totalAiRequests, setTotalAiRequests] = useState<number>(() => {
@@ -86,10 +103,12 @@ const Editor = () => {
         if (booksErr) throw booksErr;
 
         let currentBookId: string;
+        let isNewUser = false;
         if (books && books.length > 0) {
           currentBookId = books[0].id;
           if (isMountedRef.current) setBookTitle(books[0].title);
         } else {
+          isNewUser = true;
           const title = localStorage.getItem("ichen_book_title") || "My First Novel";
           const { data: newBook, error: insertErr } = await supabase
             .from("books")
@@ -128,6 +147,7 @@ const Editor = () => {
           }
         } else {
           // No chapters in DB — create first chapter
+          isNewUser = true;
           const { data: newChap, error: newChapErr } = await supabase
             .from("chapters")
             .insert({
@@ -156,9 +176,13 @@ const Editor = () => {
             setSyncStatus("synced");
           }
         }
+
+        // Show welcome modal for new users
+        if (isNewUser && !localStorage.getItem("ichen_welcome_dismissed") && isMountedRef.current) {
+          setShowWelcome(true);
+        }
       } catch (err) {
         console.error("Failed to load from Supabase:", err);
-        // Fallback: use localStorage if available
         if (isMountedRef.current) {
           setSyncStatus("local-only");
           const fallbackTitle = localStorage.getItem("ichen_book_title") || "My First Novel";
@@ -266,8 +290,13 @@ const Editor = () => {
 
   // ─── Chapter actions ───
   const handleAddChapter = async () => {
-    if (!user || !bookId) return;
-    const sortOrder = chapters.length;
+    if (!user || !bookId || chapterLoading) return;
+    setChapterLoading("adding");
+
+    const maxSortOrder = chapters.length > 0
+      ? Math.max(...chapters.map((_, i) => i))
+      : -1;
+    const sortOrder = maxSortOrder + 1;
     const title = `Chapter ${chapters.length + 1}`;
 
     try {
@@ -297,34 +326,28 @@ const Editor = () => {
       setCurrentChapterId(ch.id);
     } catch (err) {
       console.error("Failed to add chapter:", err);
-      // Fallback: local-only chapter
-      const localCh: Chapter = {
-        id: "ch-" + Date.now(),
-        title,
-        wordCount: 0,
-        content: "",
-        isComplete: false,
-      };
-      setChapters((prev) => [...prev, localCh]);
-      setCurrentChapterId(localCh.id);
-      setSyncStatus("local-only");
+      toast({ title: "Error", description: "Failed to add chapter. Please try again.", variant: "destructive" });
+    } finally {
+      setChapterLoading(null);
     }
   };
 
   const handleDeleteChapter = async (e: React.MouseEvent, chapterId: string) => {
     e.stopPropagation();
     if (chapters.length <= 1) {
-      alert("You must have at least one chapter");
+      toast({ title: "Cannot delete", description: "You must have at least one chapter." });
       return;
     }
+    if (chapterLoading) return;
+    setChapterLoading("deleting");
 
     // Optimistic UI update
+    const previous = chapters;
     const updated = chapters.filter((ch) => ch.id !== chapterId);
     setChapters(updated);
     if (currentChapterId === chapterId) setCurrentChapterId(updated[0].id);
     localStorage.removeItem(`chapter_${chapterId}`);
 
-    // Delete from Supabase
     if (user) {
       try {
         const { error } = await supabase
@@ -335,14 +358,97 @@ const Editor = () => {
         if (error) throw error;
       } catch (err) {
         console.error("Failed to delete chapter from Supabase:", err);
+        toast({ title: "Error", description: "Failed to delete chapter. Reverting.", variant: "destructive" });
+        setChapters(previous);
       }
     }
+    setChapterLoading(null);
   };
 
   const handleWordCountChange = (wordCount: number) => {
     setChapters((prev) =>
       prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch))
     );
+  };
+
+  // ─── Chapter title editing ───
+  const startEditingChapterTitle = (e: React.MouseEvent, chapter: Chapter) => {
+    e.stopPropagation();
+    setEditingChapterId(chapter.id);
+    setEditingChapterTitle(chapter.title);
+    setTimeout(() => chapterTitleInputRef.current?.focus(), 0);
+  };
+
+  const saveChapterTitle = async () => {
+    if (!editingChapterId) return;
+    const trimmed = editingChapterTitle.trim() || "Untitled";
+    setChapters((prev) =>
+      prev.map((ch) => (ch.id === editingChapterId ? { ...ch, title: trimmed } : ch))
+    );
+    setEditingChapterId(null);
+
+    if (user) {
+      try {
+        await supabase
+          .from("chapters")
+          .update({ title: trimmed })
+          .eq("id", editingChapterId)
+          .eq("user_id", user.id);
+      } catch (err) {
+        console.error("Failed to update chapter title:", err);
+      }
+    }
+  };
+
+  const cancelEditingChapterTitle = () => {
+    setEditingChapterId(null);
+    setEditingChapterTitle("");
+  };
+
+  // ─── Drag-and-drop reordering ───
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = async (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reordered = [...chapters];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setChapters(reordered);
+    setDragIndex(null);
+    setDragOverIndex(null);
+
+    // Batch update sort_order in Supabase
+    if (user) {
+      try {
+        const updates = reordered.map((ch, i) =>
+          supabase
+            .from("chapters")
+            .update({ sort_order: i })
+            .eq("id", ch.id)
+            .eq("user_id", user.id)
+        );
+        await Promise.all(updates);
+      } catch (err) {
+        console.error("Failed to update sort order:", err);
+      }
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   // ─── Book title ───
@@ -448,6 +554,9 @@ const Editor = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* Welcome Modal */}
+      <WelcomeModal open={showWelcome} onClose={() => setShowWelcome(false)} />
+
       {/* Header */}
       <header className="h-12 sm:h-16 min-h-[48px] sm:min-h-[64px] bg-background border-b flex items-center justify-between px-2 sm:px-4 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -540,28 +649,59 @@ const Editor = () => {
         }`}>
           <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
 
-          {chapters.map((chapter) => {
+          {chapters.map((chapter, index) => {
             const isActive = chapter.id === currentChapterId;
+            const isEditing = editingChapterId === chapter.id;
+            const isDragOver = dragOverIndex === index && dragIndex !== index;
             return (
               <div
                 key={chapter.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
                 onClick={() => setCurrentChapterId(chapter.id)}
                 className={`group p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
                   isActive
                     ? "border-2 bg-chapter-active border-chapter-active-border"
                     : "border border-chapter-inactive bg-chapter-inactive hover:border-chapter-hover"
+                } ${isDragOver ? "border-primary border-2" : ""} ${
+                  dragIndex === index ? "opacity-50" : ""
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
+                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <p className="text-sm font-medium text-foreground truncate">{chapter.title}</p>
+                    {isEditing ? (
+                      <input
+                        ref={chapterTitleInputRef}
+                        value={editingChapterTitle}
+                        onChange={(e) => setEditingChapterTitle(e.target.value)}
+                        onBlur={saveChapterTitle}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveChapterTitle();
+                          if (e.key === "Escape") cancelEditingChapterTitle();
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm font-medium text-foreground bg-transparent border-b border-primary outline-none px-0 py-0 min-w-0 w-full"
+                      />
+                    ) : (
+                      <p
+                        className="text-sm font-medium text-foreground truncate cursor-text"
+                        onDoubleClick={(e) => startEditingChapterTitle(e, chapter)}
+                      >
+                        {chapter.title}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {chapter.isComplete && <Check className="h-4 w-4 text-green-600" />}
                     <button
                       onClick={(e) => handleDeleteChapter(e, chapter.id)}
                       className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
+                      disabled={chapterLoading === "deleting"}
                     >
                       <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                     </button>
@@ -577,10 +717,15 @@ const Editor = () => {
           {/* Add Chapter Button */}
           <button
             onClick={handleAddChapter}
-            className="w-full p-3 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-200 cursor-pointer"
+            disabled={chapterLoading === "adding"}
+            className="w-full p-3 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="h-4 w-4" />
-            Add Chapter
+            {chapterLoading === "adding" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            {chapterLoading === "adding" ? "Adding..." : "Add Chapter"}
           </button>
 
           {/* Living Codex Section */}
