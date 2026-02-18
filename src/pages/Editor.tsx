@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff, Loader2, GripVertical } from "lucide-react";
+import {
+  Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
+  PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
+  Loader2, GripVertical, Maximize2, Minimize2,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import LexicalEditor from "../components/LexicalEditor";
-import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
 import RecentFeedback, { FeedbackRecord } from "../components/RecentFeedback";
 import EmotionHeatmap from "../components/EmotionHeatmap";
@@ -13,6 +16,7 @@ import WhatIfBranching from "../components/WhatIfBranching";
 import GhostReader from "../components/GhostReader";
 import StoryBible from "../components/StoryBible";
 import { WelcomeModal } from "../components/WelcomeModal";
+import FloatingAiToolbar from "../components/FloatingAiToolbar";
 
 interface Chapter {
   id: string;
@@ -37,13 +41,18 @@ const Editor = () => {
   const [currentChapterId, setCurrentChapterId] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible">("coach");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [bookId, setBookId] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
+  const [showFocusHint, setShowFocusHint] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
+  const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const focusHintTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Editable book title
   const [bookTitle, setBookTitle] = useState<string>("My First Novel");
@@ -65,6 +74,10 @@ const Editor = () => {
   // Welcome modal
   const [showWelcome, setShowWelcome] = useState(false);
 
+  // Word count animation
+  const [wordCountJustChanged, setWordCountJustChanged] = useState(false);
+  const wordCountTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // AI Usage tracking
   const [totalAiRequests, setTotalAiRequests] = useState<number>(() => {
     const stored = localStorage.getItem("ichen_ai_usage");
@@ -84,6 +97,42 @@ const Editor = () => {
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
 
+  // ─── Focus mode keyboard shortcut ───
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "f") {
+        e.preventDefault();
+        setFocusMode((v) => !v);
+      }
+      if (e.key === "Escape" && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [focusMode]);
+
+  // Show focus hint briefly when entering focus mode
+  useEffect(() => {
+    if (focusMode) {
+      setShowFocusHint(true);
+      focusHintTimerRef.current = setTimeout(() => setShowFocusHint(false), 2500);
+    } else {
+      setShowFocusHint(false);
+    }
+    return () => {
+      if (focusHintTimerRef.current) clearTimeout(focusHintTimerRef.current);
+    };
+  }, [focusMode]);
+
+  // Close sidebars when entering focus mode
+  useEffect(() => {
+    if (focusMode) {
+      setLeftSidebarOpen(false);
+      setRightSidebarOpen(false);
+    }
+  }, [focusMode]);
+
   // ─── Load data from Supabase on mount ───
   useEffect(() => {
     isMountedRef.current = true;
@@ -92,7 +141,6 @@ const Editor = () => {
     const loadFromSupabase = async () => {
       setSyncStatus("loading");
       try {
-        // 1. Find or create book
         let { data: books, error: booksErr } = await supabase
           .from("books")
           .select("*")
@@ -122,7 +170,6 @@ const Editor = () => {
 
         if (isMountedRef.current) setBookId(currentBookId);
 
-        // 2. Load chapters from Supabase
         const { data: dbChapters, error: chapErr } = await supabase
           .from("chapters")
           .select("*")
@@ -146,7 +193,6 @@ const Editor = () => {
             setSyncStatus("synced");
           }
         } else {
-          // No chapters in DB — create first chapter
           isNewUser = true;
           const { data: newChap, error: newChapErr } = await supabase
             .from("chapters")
@@ -177,7 +223,6 @@ const Editor = () => {
           }
         }
 
-        // Show welcome modal for new users
         if (isNewUser && !localStorage.getItem("ichen_welcome_dismissed") && isMountedRef.current) {
           setShowWelcome(true);
         }
@@ -194,10 +239,7 @@ const Editor = () => {
     };
 
     loadFromSupabase();
-
-    return () => {
-      isMountedRef.current = false;
-    };
+    return () => { isMountedRef.current = false; };
   }, [user]);
 
   // ─── Supabase save function ───
@@ -208,14 +250,9 @@ const Editor = () => {
       try {
         const { error } = await supabase
           .from("chapters")
-          .update({
-            content,
-            word_count: wordCount,
-            updated_at: new Date().toISOString(),
-          })
+          .update({ content, word_count: wordCount, updated_at: new Date().toISOString() })
           .eq("id", chapterId)
           .eq("user_id", user.id);
-
         if (error) throw error;
         if (isMountedRef.current) {
           setSyncStatus("synced");
@@ -229,32 +266,23 @@ const Editor = () => {
     [user]
   );
 
-  // ─── Editor change handler with dual save ───
+  // ─── Editor change handler ───
   const handleEditorChange = (content: string) => {
     const chapterId = currentChapterId;
-    setChapters((prev) =>
-      prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch))
-    );
-
-    // localStorage backup (instant)
+    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch)));
     localStorage.setItem(`chapter_${chapterId}`, content);
 
-    // Debounced Supabase save
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(() => {
       const chapter = chapters.find((ch) => ch.id === chapterId);
-      const wc = chapter?.wordCount ?? 0;
-      saveToSupabase(chapterId, content, wc);
+      saveToSupabase(chapterId, content, chapter?.wordCount ?? 0);
     }, 2000);
   };
 
   useEffect(() => {
-    return () => {
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    };
+    return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
   }, []);
 
-  // ─── Save on blur / beforeunload ───
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (currentChapter) {
@@ -265,26 +293,32 @@ const Editor = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentChapter]);
 
-  // ─── Selection tracking ───
+  // ─── Selection tracking with position for floating toolbar ───
   useEffect(() => {
     const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection) {
-        const text = selection.toString().trim();
-        setSelectedText(text.length > 10 ? text : "");
-      }
+      if (selectionTimeoutRef.current) clearTimeout(selectionTimeoutRef.current);
+      selectionTimeoutRef.current = setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 10) {
+          const text = selection.toString().trim();
+          setSelectedText(text);
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setSelectionPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+          });
+        } else {
+          setSelectedText("");
+          setSelectionPosition(null);
+        }
+      }, 300);
     };
-    const handleClickOrType = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.toString().length === 0) setSelectedText("");
-    };
+
     document.addEventListener("selectionchange", handleSelectionChange);
-    document.addEventListener("click", handleClickOrType);
-    document.addEventListener("keydown", handleClickOrType);
     return () => {
       document.removeEventListener("selectionchange", handleSelectionChange);
-      document.removeEventListener("click", handleClickOrType);
-      document.removeEventListener("keydown", handleClickOrType);
+      if (selectionTimeoutRef.current) clearTimeout(selectionTimeoutRef.current);
     };
   }, []);
 
@@ -293,40 +327,24 @@ const Editor = () => {
     if (!user || !bookId || chapterLoading) return;
     setChapterLoading("adding");
 
-    const maxSortOrder = chapters.length > 0
-      ? Math.max(...chapters.map((_, i) => i))
-      : -1;
-    const sortOrder = maxSortOrder + 1;
+    const sortOrder = chapters.length;
     const title = `Chapter ${chapters.length + 1}`;
 
     try {
       const { data: newChap, error } = await supabase
         .from("chapters")
-        .insert({
-          book_id: bookId,
-          user_id: user.id,
-          title,
-          content: "",
-          word_count: 0,
-          sort_order: sortOrder,
-        })
+        .insert({ book_id: bookId, user_id: user.id, title, content: "", word_count: 0, sort_order: sortOrder })
         .select()
         .single();
 
       if (error || !newChap) throw error || new Error("Failed to create chapter");
 
-      const ch: Chapter = {
-        id: newChap.id,
-        title: newChap.title,
-        wordCount: 0,
-        content: "",
-        isComplete: false,
-      };
+      const ch: Chapter = { id: newChap.id, title: newChap.title, wordCount: 0, content: "", isComplete: false };
       setChapters((prev) => [...prev, ch]);
       setCurrentChapterId(ch.id);
     } catch (err) {
       console.error("Failed to add chapter:", err);
-      toast({ title: "Error", description: "Failed to add chapter. Please try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to add chapter.", variant: "destructive" });
     } finally {
       setChapterLoading(null);
     }
@@ -341,7 +359,6 @@ const Editor = () => {
     if (chapterLoading) return;
     setChapterLoading("deleting");
 
-    // Optimistic UI update
     const previous = chapters;
     const updated = chapters.filter((ch) => ch.id !== chapterId);
     setChapters(updated);
@@ -350,14 +367,10 @@ const Editor = () => {
 
     if (user) {
       try {
-        const { error } = await supabase
-          .from("chapters")
-          .delete()
-          .eq("id", chapterId)
-          .eq("user_id", user.id);
+        const { error } = await supabase.from("chapters").delete().eq("id", chapterId).eq("user_id", user.id);
         if (error) throw error;
       } catch (err) {
-        console.error("Failed to delete chapter from Supabase:", err);
+        console.error("Failed to delete chapter:", err);
         toast({ title: "Error", description: "Failed to delete chapter. Reverting.", variant: "destructive" });
         setChapters(previous);
       }
@@ -366,9 +379,11 @@ const Editor = () => {
   };
 
   const handleWordCountChange = (wordCount: number) => {
-    setChapters((prev) =>
-      prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch))
-    );
+    setChapters((prev) => prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch)));
+    // Pulse animation on word count change
+    if (wordCountTimerRef.current) clearTimeout(wordCountTimerRef.current);
+    setWordCountJustChanged(true);
+    wordCountTimerRef.current = setTimeout(() => setWordCountJustChanged(false), 800);
   };
 
   // ─── Chapter title editing ───
@@ -382,18 +397,11 @@ const Editor = () => {
   const saveChapterTitle = async () => {
     if (!editingChapterId) return;
     const trimmed = editingChapterTitle.trim() || "Untitled";
-    setChapters((prev) =>
-      prev.map((ch) => (ch.id === editingChapterId ? { ...ch, title: trimmed } : ch))
-    );
+    setChapters((prev) => prev.map((ch) => (ch.id === editingChapterId ? { ...ch, title: trimmed } : ch)));
     setEditingChapterId(null);
-
     if (user) {
       try {
-        await supabase
-          .from("chapters")
-          .update({ title: trimmed })
-          .eq("id", editingChapterId)
-          .eq("user_id", user.id);
+        await supabase.from("chapters").update({ title: trimmed }).eq("id", editingChapterId).eq("user_id", user.id);
       } catch (err) {
         console.error("Failed to update chapter title:", err);
       }
@@ -406,9 +414,7 @@ const Editor = () => {
   };
 
   // ─── Drag-and-drop reordering ───
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
+  const handleDragStart = (index: number) => setDragIndex(index);
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
@@ -421,7 +427,6 @@ const Editor = () => {
       setDragOverIndex(null);
       return;
     }
-
     const reordered = [...chapters];
     const [moved] = reordered.splice(dragIndex, 1);
     reordered.splice(targetIndex, 0, moved);
@@ -429,17 +434,13 @@ const Editor = () => {
     setDragIndex(null);
     setDragOverIndex(null);
 
-    // Batch update sort_order in Supabase
     if (user) {
       try {
-        const updates = reordered.map((ch, i) =>
-          supabase
-            .from("chapters")
-            .update({ sort_order: i })
-            .eq("id", ch.id)
-            .eq("user_id", user.id)
+        await Promise.all(
+          reordered.map((ch, i) =>
+            supabase.from("chapters").update({ sort_order: i }).eq("id", ch.id).eq("user_id", user.id)
+          )
         );
-        await Promise.all(updates);
       } catch (err) {
         console.error("Failed to update sort order:", err);
       }
@@ -457,7 +458,6 @@ const Editor = () => {
     setBookTitle(trimmed);
     localStorage.setItem("ichen_book_title", trimmed);
     setEditingTitle(false);
-
     if (user && bookId) {
       try {
         await supabase.from("books").update({ title: trimmed }).eq("id", bookId).eq("user_id", user.id);
@@ -481,13 +481,13 @@ const Editor = () => {
     localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: newCount, date: new Date().toDateString() }));
   };
 
-  const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedback: string) => {
+  const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedbackText: string) => {
     const newRecord: FeedbackRecord = {
       id: Date.now().toString(),
       persona,
       timestamp: Date.now(),
       selectedText: selectedTextStr,
-      feedback,
+      feedback: feedbackText,
     };
     const updated = [newRecord, ...feedbackHistory].slice(0, 5);
     setFeedbackHistory(updated);
@@ -540,7 +540,6 @@ const Editor = () => {
     }
   };
 
-  // Show loading state while data loads
   if (syncStatus === "loading" && chapters.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -553,12 +552,40 @@ const Editor = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Welcome Modal */}
+    <div className={`flex flex-col h-screen overflow-hidden transition-colors duration-300 ${focusMode ? "bg-[hsl(40,30%,97%)]" : ""}`}>
       <WelcomeModal open={showWelcome} onClose={() => setShowWelcome(false)} />
 
-      {/* Header */}
-      <header className="h-12 sm:h-16 min-h-[48px] sm:min-h-[64px] bg-background border-b flex items-center justify-between px-2 sm:px-4 shrink-0">
+      {/* Floating AI Toolbar on selection */}
+      <FloatingAiToolbar
+        selectedText={selectedText}
+        position={selectionPosition}
+        totalAiRequests={totalAiRequests}
+        aiRequestLimit={10}
+        onDismiss={() => {
+          setSelectedText("");
+          setSelectionPosition(null);
+        }}
+        onAnalyze={(persona, feedbackText) => {
+          if (totalAiRequests < 10) {
+            incrementAiUsage();
+            addFeedbackToHistory(persona, selectedText, feedbackText);
+          }
+        }}
+      />
+
+      {/* Focus mode hint */}
+      {showFocusHint && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 bg-foreground/90 text-background text-xs rounded-full shadow-lg animate-fade-in pointer-events-none">
+          Focus Mode — press Esc or Ctrl+Shift+F to exit
+        </div>
+      )}
+
+      {/* Header — hidden in focus mode */}
+      <header
+        className={`h-12 sm:h-16 min-h-[48px] sm:min-h-[64px] bg-background border-b flex items-center justify-between px-2 sm:px-4 shrink-0 transition-all duration-300 ${
+          focusMode ? "opacity-0 pointer-events-none h-0 min-h-0 border-none overflow-hidden" : ""
+        }`}
+      >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
@@ -602,9 +629,7 @@ const Editor = () => {
           </button>
           <button
             onClick={() => {
-              if (currentChapter) {
-                saveToSupabase(currentChapter.id, currentChapter.content, currentChapter.wordCount);
-              }
+              if (currentChapter) saveToSupabase(currentChapter.id, currentChapter.content, currentChapter.wordCount);
             }}
             className="px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
           >
@@ -612,9 +637,7 @@ const Editor = () => {
           </button>
           {user && (
             <div className="hidden sm:flex items-center gap-2 ml-1">
-              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                {user.email}
-              </span>
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user.email}</span>
               <button
                 onClick={handleSignOut}
                 className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded hover:bg-destructive/10"
@@ -624,6 +647,14 @@ const Editor = () => {
               </button>
             </div>
           )}
+          {/* Focus mode toggle */}
+          <button
+            onClick={() => setFocusMode((v) => !v)}
+            className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            title="Focus mode (Ctrl+Shift+F)"
+          >
+            <Maximize2 size={18} />
+          </button>
           <button
             onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
             className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
@@ -666,7 +697,7 @@ const Editor = () => {
                   isActive
                     ? "border-2 bg-chapter-active border-chapter-active-border"
                     : "border border-chapter-inactive bg-chapter-inactive hover:border-chapter-hover"
-                } ${isDragOver ? "border-primary border-2" : ""} ${
+                } ${isDragOver ? "border-primary border-2 scale-[1.01]" : ""} ${
                   dragIndex === index ? "opacity-50" : ""
                 }`}
               >
@@ -714,21 +745,15 @@ const Editor = () => {
             );
           })}
 
-          {/* Add Chapter Button */}
           <button
             onClick={handleAddChapter}
             disabled={chapterLoading === "adding"}
             className="w-full p-3 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {chapterLoading === "adding" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
+            {chapterLoading === "adding" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {chapterLoading === "adding" ? "Adding..." : "Add Chapter"}
           </button>
 
-          {/* Living Codex Section */}
           <div className="border-t border-border mt-6 pt-4">
             <h3 className="font-semibold text-sm text-sidebar-foreground mb-3">Living Codex</h3>
             <div className="space-y-2">
@@ -745,28 +770,86 @@ const Editor = () => {
         </aside>
 
         {/* Center Editor */}
-        <main className="flex-1 bg-muted/30 overflow-hidden flex flex-col">
+        <main className={`flex-1 overflow-hidden flex flex-col transition-colors duration-300 ${focusMode ? "bg-[hsl(40,30%,97%)]" : "bg-muted/30"}`}>
           {currentChapter ? (
             <>
-              {/* Chapter header */}
-              <div className="px-6 py-3 border-b border-border bg-muted/50">
+              {/* Chapter header — fades out in focus mode */}
+              <div
+                className={`px-6 py-3 border-b border-border transition-all duration-300 ${
+                  focusMode
+                    ? "opacity-0 h-0 py-0 overflow-hidden border-none"
+                    : "bg-muted/50"
+                }`}
+              >
                 <h1 className="text-base font-semibold text-foreground">{currentChapter.title}</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {currentChapter.wordCount.toLocaleString()} words • {currentChapter.isComplete ? "Complete" : "Draft"}
+                  <span
+                    className={`transition-colors duration-500 ${
+                      wordCountJustChanged ? "text-primary font-semibold" : ""
+                    }`}
+                  >
+                    {currentChapter.wordCount.toLocaleString()} words
+                  </span>
+                  {" "}&bull;{" "}
+                  {currentChapter.isComplete ? "Complete" : "Draft"}
                 </p>
               </div>
 
+              {/* Focus mode exit button — appears at top right in focus mode */}
+              {focusMode && (
+                <div className="absolute top-3 right-4 z-10 flex items-center gap-2">
+                  {/* Floating word count */}
+                  <span
+                    className={`text-xs font-medium transition-all duration-500 ${
+                      wordCountJustChanged
+                        ? "text-primary scale-110"
+                        : "text-muted-foreground/50"
+                    }`}
+                  >
+                    {currentChapter.wordCount.toLocaleString()} words
+                  </span>
+                  {/* Sync status */}
+                  <span className="text-xs text-muted-foreground/40">
+                    {syncStatus === "syncing" ? (
+                      <Loader2 size={12} className="animate-spin inline" />
+                    ) : syncStatus === "synced" ? (
+                      <Cloud size={12} className="inline text-green-500/60" />
+                    ) : null}
+                  </span>
+                  <button
+                    onClick={() => setFocusMode(false)}
+                    className="p-1.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors rounded hover:bg-muted/40"
+                    title="Exit focus mode (Esc)"
+                  >
+                    <Minimize2 size={14} />
+                  </button>
+                </div>
+              )}
+
               {/* Editor canvas */}
-              <div className="flex-1 overflow-y-auto flex justify-center py-4 sm:py-8 px-2 sm:px-0">
-                <div className="w-full max-w-[800px]">
+              <div className={`flex-1 overflow-y-auto flex justify-center py-4 sm:py-8 px-2 sm:px-0 transition-all duration-300 ${focusMode ? "py-12 sm:py-16" : ""}`}>
+                <div className={`w-full transition-all duration-500 ${focusMode ? "max-w-[680px]" : "max-w-[800px]"}`}>
                   <LexicalEditor
                     initialContent={currentChapter.content}
                     onChange={handleEditorChange}
                     onWordCountChange={handleWordCountChange}
-                    placeholder="Start writing..."
+                    placeholder="Start writing your story..."
                   />
                 </div>
               </div>
+
+              {/* Bottom status bar in focus mode */}
+              {focusMode && (
+                <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-4 pointer-events-none">
+                  <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-foreground/5 border border-border/30 text-xs text-muted-foreground/50">
+                    <span>{currentChapter.title}</span>
+                    <span>&bull;</span>
+                    <span className={`transition-colors duration-300 ${wordCountJustChanged ? "text-primary/70" : ""}`}>
+                      {currentChapter.wordCount.toLocaleString()} words
+                    </span>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-muted-foreground p-6">Select a chapter to start writing</p>
@@ -813,40 +896,57 @@ const Editor = () => {
           <div key={rightTab} className="flex-1 overflow-y-auto p-4 animate-fade-in">
             {rightTab === "coach" && (
               <>
-                <h2 className="font-semibold text-foreground mb-4">✨ Craft Coach</h2>
+                <h2 className="font-semibold text-foreground mb-4">Craft Coach</h2>
+
+                {/* Selection highlight indicator */}
+                {selectedText && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-primary/8 border border-primary/20 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+                    <span className="text-xs text-primary font-medium">
+                      {selectedText.split(/\s+/).filter(Boolean).length} words selected
+                    </span>
+                    <button
+                      onClick={() => { setSelectedText(""); setSelectionPosition(null); }}
+                      className="ml-auto text-muted-foreground hover:text-foreground"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
 
                 {/* Stats Card */}
                 <div className="bg-background border border-border rounded-lg p-4 mb-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Words Selected</span>
-                      <span className="text-sm font-semibold text-foreground">
-                        {selectedText.split(/\s+/).filter(Boolean).length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Chapter Words</span>
-                      <span className="text-sm font-semibold text-foreground">
+                      <span className={`text-sm font-semibold transition-colors duration-300 ${wordCountJustChanged ? "text-primary" : "text-foreground"}`}>
                         {currentChapter?.wordCount.toLocaleString() || 0}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">AI Analyses</span>
-                      <span className={`text-sm font-semibold ${
-                        totalAiRequests >= 10 ? "text-destructive" : "text-foreground"
-                      }`}>
+                      <span className={`text-sm font-semibold ${totalAiRequests >= 10 ? "text-destructive" : "text-foreground"}`}>
                         {totalAiRequests}/10
                       </span>
                     </div>
+                    {/* Usage bar */}
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          totalAiRequests >= 10
+                            ? "bg-destructive"
+                            : totalAiRequests >= 8
+                            ? "bg-amber-400"
+                            : "bg-primary"
+                        }`}
+                        style={{ width: `${Math.min((totalAiRequests / 10) * 100, 100)}%` }}
+                      />
+                    </div>
                     {totalAiRequests >= 10 && (
-                      <p className="text-xs text-destructive mt-2">
-                        Daily limit reached. Upgrade for more analyses.
-                      </p>
+                      <p className="text-xs text-destructive mt-1">Daily limit reached. Upgrade for more.</p>
                     )}
                     {totalAiRequests >= 8 && totalAiRequests < 10 && (
-                      <p className="text-xs text-amber-600 mt-2">
-                        {10 - totalAiRequests} analyses remaining today
-                      </p>
+                      <p className="text-xs text-amber-600 mt-1">{10 - totalAiRequests} analyses remaining today</p>
                     )}
                   </div>
                 </div>
@@ -857,22 +957,17 @@ const Editor = () => {
                     selectedText={selectedText}
                     totalAiRequests={totalAiRequests}
                     aiRequestLimit={10}
-                    onApplySuggestion={(text) => {
-                      console.log("Applying suggestion:", text);
-                    }}
-                    onDismiss={() => {
-                      setSelectedText("");
-                    }}
-                    onAnalyze={(persona, feedback) => {
+                    onApplySuggestion={(text) => { console.log("Applying suggestion:", text); }}
+                    onDismiss={() => { setSelectedText(""); setSelectionPosition(null); }}
+                    onAnalyze={(persona, feedbackText) => {
                       if (totalAiRequests < 10) {
                         incrementAiUsage();
-                        addFeedbackToHistory(persona, selectedText, feedback);
+                        addFeedbackToHistory(persona, selectedText, feedbackText);
                       }
                     }}
                   />
                 </div>
 
-                {/* Recent Feedback Section */}
                 <div className="border-t border-border pt-4">
                   <RecentFeedback
                     history={feedbackHistory}
@@ -884,34 +979,20 @@ const Editor = () => {
             )}
 
             {rightTab === "heatmap" && (
-              <EmotionHeatmap
-                chapterContent={currentChapter?.content || ""}
-                onAnalyze={incrementAiUsage}
-              />
+              <EmotionHeatmap chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
             )}
-
             {rightTab === "ghost" && (
-              <GhostReader
-                chapterContent={currentChapter?.content || ""}
-                onAnalyze={incrementAiUsage}
-              />
+              <GhostReader chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
             )}
-
             {rightTab === "branch" && (
               <WhatIfBranching
                 selectedText={selectedText}
-                onApply={(text) => {
-                  console.log("Apply branch:", text);
-                }}
+                onApply={(text) => { console.log("Apply branch:", text); }}
                 onAnalyze={incrementAiUsage}
               />
             )}
-
             {rightTab === "bible" && (
-              <StoryBible
-                chapterContent={currentChapter?.content || ""}
-                onAnalyze={incrementAiUsage}
-              />
+              <StoryBible chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
             )}
           </div>
         </aside>
