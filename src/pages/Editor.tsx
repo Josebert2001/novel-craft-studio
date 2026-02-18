@@ -267,17 +267,22 @@ const Editor = () => {
   );
 
   // ─── Editor change handler ───
-  const handleEditorChange = (content: string) => {
+  const handleEditorChange = useCallback((content: string) => {
     const chapterId = currentChapterId;
-    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch)));
-    localStorage.setItem(`chapter_${chapterId}`, content);
+    setChapters((prev) => {
+      const updated = prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch));
+      // Use latest wordCount from updated state for auto-save
+      const chapter = updated.find((ch) => ch.id === chapterId);
+      localStorage.setItem(`chapter_${chapterId}`, content);
 
-    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      const chapter = chapters.find((ch) => ch.id === chapterId);
-      saveToSupabase(chapterId, content, chapter?.wordCount ?? 0);
-    }, 2000);
-  };
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveToSupabase(chapterId, content, chapter?.wordCount ?? 0);
+      }, 2000);
+
+      return updated;
+    });
+  }, [currentChapterId, saveToSupabase]);
 
   useEffect(() => {
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
