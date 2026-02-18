@@ -851,6 +851,7 @@ const Editor = () => {
               <div className={`flex-1 overflow-y-auto flex justify-center py-4 sm:py-8 px-2 sm:px-0 transition-all duration-300 ${focusMode ? "py-12 sm:py-16" : ""}`}>
                 <div className={`w-full transition-all duration-500 ${focusMode ? "max-w-[680px]" : "max-w-[800px]"}`}>
                   <LexicalEditor
+                    key={currentChapterId}
                     initialContent={currentChapter.content}
                     onChange={handleEditorChange}
                     onWordCountChange={handleWordCountChange}
