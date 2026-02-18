@@ -19,6 +19,7 @@ import { EditorState } from 'lexical';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import ToolbarPlugin from './ToolbarPlugin';
 import WordCountPlugin from './WordCountPlugin';
+import { SceneBreakNode } from './SceneBreakNode';
 
 
 
@@ -69,6 +70,7 @@ export default function LexicalEditor({
       AutoLinkNode,
       LinkNode,
       HorizontalRuleNode,
+      SceneBreakNode,
     ],
     onError: (error: Error) => {
       console.error('Lexical error:', error);

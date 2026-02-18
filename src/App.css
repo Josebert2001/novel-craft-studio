@@ -39,12 +39,12 @@
   color: #888;
 }
 
-/* Lexical Editor Styles - Microsoft Word-like */
+/* Lexical Editor Styles - Premium Writing Environment */
 .lexical-editor-container {
   position: relative;
   width: 100%;
   margin: 0 auto;
-  background-color: hsl(40, 33%, 98%);
+  background-color: hsl(var(--background));
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -56,10 +56,10 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: hsl(var(--muted) / 0.6);
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
-  backdrop-filter: blur(8px);
-  padding: 4px 20px;
+  background-color: hsl(var(--background) / 0.8);
+  border-bottom: 1px solid hsl(var(--border) / 0.3);
+  backdrop-filter: blur(10px);
+  padding: 6px 24px;
 }
 
 .lexical-toolbar {
@@ -76,58 +76,61 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
   border: none;
   background-color: transparent;
   cursor: pointer;
   color: hsl(var(--muted-foreground));
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   flex-shrink: 0;
+  font-size: 14px;
 }
 
 .toolbar-button:hover {
-  background-color: hsl(var(--muted));
+  background-color: hsl(var(--muted) / 0.8);
   color: hsl(var(--foreground));
 }
 
 .toolbar-button-active {
-  background-color: hsl(var(--primary) / 0.15);
+  background-color: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
 }
 
 .toolbar-button-active:hover {
-  background-color: hsl(var(--primary) / 0.25);
+  background-color: hsl(var(--primary) / 0.18);
 }
 
 .toolbar-divider {
   width: 1px;
-  height: 18px;
+  height: 20px;
   min-width: 1px;
-  background-color: hsl(var(--border) / 0.4);
-  margin: 0 4px;
+  background-color: hsl(var(--border) / 0.3);
+  margin: 0 6px;
   flex-shrink: 0;
 }
 
 .lexical-content-editable {
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-  font-size: 16px;
-  line-height: 1.7;
-  letter-spacing: 0.01em;
-  padding: 16px 20px;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.75;
+  letter-spacing: 0.3px;
+  padding: 48px 32px;
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
-  color: hsl(var(--foreground));
+  color: hsl(var(--foreground) / 0.95);
   background-color: hsl(var(--background));
   flex: 1;
   overflow-y: auto;
   cursor: text;
   white-space: pre-wrap;
   word-break: break-word;
-  caret-color: hsl(var(--foreground));
+  caret-color: hsl(var(--primary));
+  caret-width: 2px;
 }
 
 .lexical-content-editable:focus {
@@ -138,55 +141,75 @@
 
 .lexical-placeholder {
   position: absolute;
-  top: 16px;
-  left: 20px;
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-  font-size: 16px;
-  line-height: 1.7;
-  color: hsl(var(--muted-foreground) / 0.35);
+  top: 48px;
+  left: 32px;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  font-size: 17px;
+  line-height: 1.75;
+  color: hsl(var(--muted-foreground) / 0.4);
   pointer-events: none;
-  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 /* Rich Text Formatting */
 .editor-paragraph {
-  margin: 0 0 0.8em 0;
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  margin: 0 0 1.2em 0;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  line-height: 1.75;
 }
 
 .editor-heading-h1 {
-  font-size: 2em;
+  font-size: 2.4em;
   font-weight: 700;
-  margin: 1.5em 0 0.6em 0;
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-  letter-spacing: -0.02em;
+  margin: 2em 0 0.8em 0;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: hsl(var(--foreground));
 }
 
 .editor-heading-h2 {
-  font-size: 1.6em;
-  font-weight: 600;
-  margin: 1.2em 0 0.5em 0;
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 1.6em 0 0.8em 0;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: hsl(var(--foreground));
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid hsl(var(--primary) / 0.2);
 }
 
 .editor-heading-h3 {
-  font-size: 1.3em;
+  font-size: 1.4em;
   font-weight: 600;
-  margin: 1em 0 0.4em 0;
-  font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
+  margin: 1.4em 0 0.6em 0;
+  font-family: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  color: hsl(var(--foreground) / 0.9);
+  text-transform: uppercase;
+  font-size: 0.95em;
+  letter-spacing: 0.15em;
+  opacity: 0.8;
 }
 
 .editor-text-bold {
   font-weight: 700;
+  color: hsl(var(--foreground));
 }
 
 .editor-text-italic {
   font-style: italic;
+  color: hsl(var(--foreground) / 0.95);
 }
 
 .editor-text-underline {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+  text-decoration-color: hsl(var(--primary) / 0.4);
 }
 
 .editor-link {
@@ -194,18 +217,98 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .editor-link:hover {
-  opacity: 0.8;
+  color: hsl(var(--primary) / 0.8);
+  text-decoration-color: hsl(var(--primary) / 0.6);
 }
 
 .editor-list-ul,
 .editor-list-ol {
-  margin: 0.8em 0;
-  padding-left: 1.5em;
+  margin: 1.2em 0;
+  padding-left: 2em;
 }
 
 .editor-listitem {
-  margin: 0.4em 0;
+  margin: 0.6em 0;
+  line-height: 1.75;
+}
+
+/* Scene Break - horizontal rule */
+.editor-horizontal-rule {
+  margin: 2.4em 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, hsl(var(--border) / 0.3), transparent);
+  position: relative;
+}
+
+.editor-horizontal-rule::before {
+  content: '✦';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: hsl(var(--background));
+  padding: 0 8px;
+  color: hsl(var(--muted-foreground) / 0.5);
+  font-size: 12px;
+}
+
+/* Scene Break Node */
+.editor-scene-break-visual {
+  margin: 2.4em 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 24px;
+}
+
+.scene-break-line {
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, hsl(var(--border) / 0.3) 20%, hsl(var(--border) / 0.3) 80%, transparent);
+}
+
+.scene-break-icon {
+  position: relative;
+  z-index: 1;
+  background: hsl(var(--background));
+  padding: 0 10px;
+  color: hsl(var(--muted-foreground) / 0.5);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Selection and focus highlight */
+.lexical-content-editable::selection {
+  background-color: hsl(var(--primary) / 0.15);
+}
+
+/* Code block styling */
+.editor-code {
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 14px;
+  background-color: hsl(var(--muted) / 0.5);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 1.2em 0;
+  overflow-x: auto;
+}
+
+/* Quote styling */
+.editor-quote {
+  border-left: 4px solid hsl(var(--primary) / 0.3);
+  padding-left: 1.2em;
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
+  color: hsl(var(--foreground) / 0.7);
+  font-style: italic;
 }
