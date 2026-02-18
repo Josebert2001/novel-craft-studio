@@ -72,6 +72,18 @@ export default function LexicalEditor({
       HorizontalRuleNode,
       SceneBreakNode,
     ],
+    editorState: initialContent ? (() => {
+      try {
+        // Validate it's a proper Lexical JSON (has "root" key)
+        const parsed = JSON.parse(initialContent);
+        if (parsed && parsed.root) {
+          return initialContent;
+        }
+      } catch {
+        // Not valid JSON, ignore
+      }
+      return null;
+    })() : null,
     onError: (error: Error) => {
       console.error('Lexical error:', error);
     },
