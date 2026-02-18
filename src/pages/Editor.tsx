@@ -303,7 +303,23 @@ const Editor = () => {
     const handleSelectionChange = () => {
       if (selectionTimeoutRef.current) clearTimeout(selectionTimeoutRef.current);
       selectionTimeoutRef.current = setTimeout(() => {
+        // Don't show toolbar when editing book title or chapter titles
+        if (editingTitle || editingChapterId) {
+          setSelectedText("");
+          setSelectionPosition(null);
+          return;
+        }
+
         const selection = window.getSelection();
+        // Also check if the selection is inside an input or textarea (title fields)
+        const anchorNode = selection?.anchorNode;
+        const parentElement = anchorNode instanceof Element ? anchorNode : anchorNode?.parentElement;
+        if (parentElement?.closest('input, textarea')) {
+          setSelectedText("");
+          setSelectionPosition(null);
+          return;
+        }
+
         if (selection && selection.toString().trim().length > 10) {
           const text = selection.toString().trim();
           setSelectedText(text);
@@ -325,7 +341,7 @@ const Editor = () => {
       document.removeEventListener("selectionchange", handleSelectionChange);
       if (selectionTimeoutRef.current) clearTimeout(selectionTimeoutRef.current);
     };
-  }, []);
+  }, [editingTitle, editingChapterId]);
 
   // ─── Chapter actions ───
   const handleAddChapter = async () => {
