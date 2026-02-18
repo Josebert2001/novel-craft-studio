@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     const fullPrompt = `${systemPrompt}\n\n---USER TEXT BELOW---\n${sanitizedText}\n---END USER TEXT---\n\nProvide analysis following the system instruction above.`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
