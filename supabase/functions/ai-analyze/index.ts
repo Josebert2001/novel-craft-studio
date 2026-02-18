@@ -4,7 +4,9 @@ const allowedOrigins = [
   "https://id-preview--448a2886-f0c2-460b-9254-1ec1721a6ea5.lovable.app",
   "https://your-ichen-app.lovable.app",
   "http://localhost:5173",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "http://localhost:8080",
+  "https://localhost:8080"
 ];
 
 const getCorsHeaders = (origin: string | null) => {
