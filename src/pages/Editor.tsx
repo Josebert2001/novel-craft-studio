@@ -266,22 +266,25 @@ const Editor = () => {
     [user]
   );
 
+  const currentWordCountRef = useRef<number>(0);
+  const pendingContentRef = useRef<{ chapterId: string; content: string } | null>(null);
+
   // ─── Editor change handler ───
   const handleEditorChange = useCallback((content: string) => {
     const chapterId = currentChapterId;
-    setChapters((prev) => {
-      const updated = prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch));
-      // Use latest wordCount from updated state for auto-save
-      const chapter = updated.find((ch) => ch.id === chapterId);
-      localStorage.setItem(`chapter_${chapterId}`, content);
 
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        saveToSupabase(chapterId, content, chapter?.wordCount ?? 0);
-      }, 2000);
+    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, content } : ch)));
 
-      return updated;
-    });
+    localStorage.setItem(`chapter_${chapterId}`, content);
+    pendingContentRef.current = { chapterId, content };
+
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (pendingContentRef.current) {
+        const { chapterId: id, content: c } = pendingContentRef.current;
+        saveToSupabase(id, c, currentWordCountRef.current);
+      }
+    }, 2000);
   }, [currentChapterId, saveToSupabase]);
 
   useEffect(() => {
@@ -400,8 +403,8 @@ const Editor = () => {
   };
 
   const handleWordCountChange = (wordCount: number) => {
+    currentWordCountRef.current = wordCount;
     setChapters((prev) => prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch)));
-    // Pulse animation on word count change
     if (wordCountTimerRef.current) clearTimeout(wordCountTimerRef.current);
     setWordCountJustChanged(true);
     wordCountTimerRef.current = setTimeout(() => setWordCountJustChanged(false), 800);
