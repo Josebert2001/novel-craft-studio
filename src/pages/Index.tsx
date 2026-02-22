@@ -140,14 +140,14 @@ const Index = () => {
       {/* Editor preview strip */}
       <section className="px-6 pb-24">
         <div className="max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+          <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden hidden sm:block">
             <div className="h-8 bg-muted border-b border-border flex items-center px-4 gap-2">
               <span className="w-3 h-3 rounded-full bg-destructive/50" />
               <span className="w-3 h-3 rounded-full bg-secondary/70" />
               <span className="w-3 h-3 rounded-full bg-green-400/60" />
               <span className="ml-4 text-xs text-muted-foreground">ICHEN Manuscript — Chapter 1</span>
             </div>
-            <div className="grid grid-cols-[200px_1fr_240px] divide-x divide-border h-72">
+            <div className="hidden md:grid grid-cols-[200px_1fr_240px] divide-x divide-border h-72">
               {/* Left sidebar preview */}
               <div className="bg-sidebar p-4 flex flex-col gap-2 overflow-hidden">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Chapters</p>
