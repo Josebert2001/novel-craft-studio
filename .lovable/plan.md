@@ -1,66 +1,63 @@
 
 
-# Plan: Chapter CRUD Operations + Welcome Modal
+## Add PWA / Installable Web App Support
 
-## What Already Works
-The Editor already has Supabase-connected add, delete, and content saving for chapters. The remaining gaps are: **chapter title editing**, **drag-and-drop reordering**, **loading states during operations**, and the **Welcome Modal**.
+Turn ICHEN Manuscript into an installable app that works offline and feels native on any device.
 
-## Changes
+### What You Get
+- Users can "Add to Home Screen" from their browser -- it looks and feels like a real app
+- The editor works offline (localStorage already saves every keystroke, so writing never stops)
+- Fast loading with cached assets
+- Works on all phones and tablets (iPhone, Android, desktop)
+- No app store submission needed
 
-### 1. Chapter Title Editing (Editor.tsx)
-- Add inline title editing in the left sidebar (click chapter title to edit)
-- On save, UPDATE the `chapters` table with the new title
-- Update local state simultaneously
+### How It Works
 
-### 2. Loading States for Chapter Operations (Editor.tsx)
-- Add a `chapterLoading` state (e.g., `"adding" | "deleting" | null`)
-- Disable the "Add Chapter" button and show a spinner while inserting
-- Show a brief loading indicator on the chapter being deleted
-- Replace the `alert()` on single-chapter delete with a toast notification
+1. **Install `vite-plugin-pwa`** -- this handles service worker generation and the web app manifest automatically.
 
-### 3. Drag-and-Drop Chapter Reordering (Editor.tsx)
-- Use native HTML5 drag-and-drop (no new dependencies needed)
-- Add `draggable` attribute and drag event handlers to chapter items
-- On drop, reorder the local chapters array
-- Batch update `sort_order` for all affected chapters in Supabase
+2. **Configure the PWA in `vite.config.ts`**:
+   - App name: "ICHEN Manuscript"
+   - Theme color matching the brand
+   - Cache all static assets (JS, CSS, fonts, images) for offline use
+   - Network-first strategy for Supabase API calls (so data syncs when online, falls back to cache when offline)
+   - Exclude `/~oauth` from caching so login redirects always work
 
-### 4. Welcome Modal (new file: src/components/WelcomeModal.tsx)
-- Create a modal component shown when:
-  - The user has no existing books (first signup)
-  - localStorage key `ichen_welcome_dismissed` is not set
-- Content: Welcome message, 3-point interface guide (left sidebar, center canvas, right AI coach), "Start Writing" button
-- Checkbox: "Don't show this again" saves to localStorage
-- Styling: centered overlay with backdrop blur, white card, fade-in animation, ICHEN logo
+3. **Add PWA icons** to `/public`:
+   - 192x192 and 512x512 PNG icons (generated from existing logo)
+   - Apple touch icon for iOS
 
-### 5. Integration in Editor.tsx
-- After data loads, check if this is a first-time user (book was just created, no chapters existed)
-- Show `WelcomeModal` if conditions are met
-- Pass `onClose` handler to dismiss and set localStorage flag
+4. **Update `index.html`** with mobile meta tags:
+   - `apple-mobile-web-app-capable`
+   - `apple-mobile-web-app-status-bar-style`
+   - Theme color meta tag
 
-## Technical Details
+5. **Create an `/install` page** with:
+   - Instructions for installing on iOS (Share > Add to Home Screen) and Android (browser menu > Install)
+   - A "Install App" button that triggers the browser's native install prompt (on supported browsers)
+   - Link from the landing page
 
-### Files Modified
-- `src/pages/Editor.tsx` -- Add chapter title editing UI, drag-and-drop handlers, loading states, welcome modal integration
+6. **Add an offline indicator** in the editor header:
+   - Show "Offline" badge when disconnected
+   - Auto-sync to Supabase when connection returns
+   - This pairs with the existing localStorage backup strategy
 
-### Files Created
-- `src/components/WelcomeModal.tsx` -- Welcome modal component
+### Technical Details
 
-### No Database Changes Required
-All necessary tables and RLS policies already exist. Chapter title updates use the existing `chapters` UPDATE policy. Reordering updates `sort_order` using the same policy.
+**New dependency:** `vite-plugin-pwa`
 
-### Chapter Title Edit Flow
-```text
-Click title --> Show inline input
-  --> On Enter/blur --> UPDATE chapters SET title = ? WHERE id = ? AND user_id = auth.uid()
-  --> Update local state
-  --> On Escape --> Cancel edit
-```
+**Files created:**
+- `public/pwa-192x192.png` and `public/pwa-512x512.png` -- app icons
+- `src/pages/Install.tsx` -- install instructions page
 
-### Drag-and-Drop Flow
-```text
-Drag chapter item --> Track drag index
-  --> Drop on target --> Reorder local array
-  --> Batch UPDATE sort_order for all chapters in Supabase
-  --> Fallback: revert on error
-```
+**Files modified:**
+- `vite.config.ts` -- add VitePWA plugin config with manifest, workbox settings, and `navigateFallbackDenylist: [/^\/~oauth/]`
+- `index.html` -- add apple-mobile-web-app meta tags and theme-color
+- `src/App.tsx` -- add `/install` route
+- `src/pages/Index.tsx` -- add "Install App" link
+- `src/pages/Editor.tsx` -- add offline/online status indicator in header
+
+**Offline behavior:**
+- Writing always works (localStorage saves every keystroke -- already built)
+- When back online, existing auto-save logic syncs to Supabase automatically
+- AI features gracefully show "You're offline" instead of failing silently
 
