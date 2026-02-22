@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Sparkles, GitBranch, Eye, BookMarked, ArrowRight, PenLine, Brain, BarChart3 } from "lucide-react";
+import { BookOpen, Sparkles, GitBranch, Eye, BookMarked, ArrowRight, PenLine, Brain, BarChart3, Download } from "lucide-react";
 
 const FEATURES = [
   {
@@ -63,6 +63,13 @@ const Index = () => {
             <span className="font-bold text-lg text-foreground tracking-tight">ICHEN Manuscript</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              to="/install"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Install
+            </Link>
             <Link
               to="/auth"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"

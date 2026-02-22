@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
   PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
-  Loader2, GripVertical, Maximize2, Minimize2,
+  Loader2, GripVertical, Maximize2, Minimize2, WifiOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +73,19 @@ const Editor = () => {
 
   // Welcome modal
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Online/offline status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   // Word count animation
   const [wordCountJustChanged, setWordCountJustChanged] = useState(false);
@@ -648,6 +661,12 @@ const Editor = () => {
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <span className="hidden md:inline-flex">{renderSyncStatus()}</span>
+          {!isOnline && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+              <WifiOff size={12} />
+              Offline
+            </span>
+          )}
           <button className="hidden sm:inline-flex px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
             Export
           </button>
