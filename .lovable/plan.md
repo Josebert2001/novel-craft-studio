@@ -1,63 +1,58 @@
 
 
-## Add PWA / Installable Web App Support
+## Fix PWA Service Worker Deployment Issues
 
-Turn ICHEN Manuscript into an installable app that works offline and feels native on any device.
+The reported problem: users visiting the deployed site see a blank page because the service worker serves stale cached assets after a new deployment. The cached `index.html` references old JS/CSS filenames that no longer exist on the server.
 
-### What You Get
-- Users can "Add to Home Screen" from their browser -- it looks and feels like a real app
-- The editor works offline (localStorage already saves every keystroke, so writing never stops)
-- Fast loading with cached assets
-- Works on all phones and tablets (iPhone, Android, desktop)
-- No app store submission needed
+### Root Cause
 
-### How It Works
+The current PWA config uses `registerType: "autoUpdate"` with broad caching (`globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"]`). When a new version is deployed:
+1. The old service worker serves cached `index.html` pointing to old asset filenames
+2. Those old assets return 404s from the server
+3. The user sees a blank page until the service worker update cycle completes (which may never succeed if the page can't load enough to trigger it)
 
-1. **Install `vite-plugin-pwa`** -- this handles service worker generation and the web app manifest automatically.
+### What Changes
 
-2. **Configure the PWA in `vite.config.ts`**:
-   - App name: "ICHEN Manuscript"
-   - Theme color matching the brand
-   - Cache all static assets (JS, CSS, fonts, images) for offline use
-   - Network-first strategy for Supabase API calls (so data syncs when online, falls back to cache when offline)
-   - Exclude `/~oauth` from caching so login redirects always work
+1. **Add `skipWaiting: true` to workbox config** -- forces the new service worker to activate immediately instead of waiting for all tabs to close.
 
-3. **Add PWA icons** to `/public`:
-   - 192x192 and 512x512 PNG icons (generated from existing logo)
-   - Apple touch icon for iOS
+2. **Add `clientsClaim: true`** -- makes the new service worker take control of existing pages right away.
 
-4. **Update `index.html`** with mobile meta tags:
-   - `apple-mobile-web-app-capable`
-   - `apple-mobile-web-app-status-bar-style`
-   - Theme color meta tag
+3. **Narrow `globPatterns`** -- exclude overly broad patterns; only precache the essentials (`index.html`, icons, manifest).
 
-5. **Create an `/install` page** with:
-   - Instructions for installing on iOS (Share > Add to Home Screen) and Android (browser menu > Install)
-   - A "Install App" button that triggers the browser's native install prompt (on supported browsers)
-   - Link from the landing page
+4. **Add `cleanupOutdatedCaches: true`** -- removes old cache entries from previous service worker versions that no longer match.
 
-6. **Add an offline indicator** in the editor header:
-   - Show "Offline" badge when disconnected
-   - Auto-sync to Supabase when connection returns
-   - This pairs with the existing localStorage backup strategy
+5. **Exclude the Lovable preview token paths** -- add `navigateFallbackDenylist` entries for preview/token URLs that should never be cached.
 
 ### Technical Details
 
-**New dependency:** `vite-plugin-pwa`
+**File modified:** `vite.config.ts`
 
-**Files created:**
-- `public/pwa-192x192.png` and `public/pwa-512x512.png` -- app icons
-- `src/pages/Install.tsx` -- install instructions page
+Changes to the `workbox` section of `VitePWA()`:
 
-**Files modified:**
-- `vite.config.ts` -- add VitePWA plugin config with manifest, workbox settings, and `navigateFallbackDenylist: [/^\/~oauth/]`
-- `index.html` -- add apple-mobile-web-app meta tags and theme-color
-- `src/App.tsx` -- add `/install` route
-- `src/pages/Index.tsx` -- add "Install App" link
-- `src/pages/Editor.tsx` -- add offline/online status indicator in header
+```
+workbox: {
+  skipWaiting: true,
+  clientsClaim: true,
+  cleanupOutdatedCaches: true,
+  globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+  navigateFallback: "index.html",
+  navigateFallbackDenylist: [/^\/~oauth/, /\?__lovable_token=/],
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "supabase-api-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24,
+        },
+        networkTimeoutSeconds: 5,
+      },
+    },
+  ],
+},
+```
 
-**Offline behavior:**
-- Writing always works (localStorage saves every keystroke -- already built)
-- When back online, existing auto-save logic syncs to Supabase automatically
-- AI features gracefully show "You're offline" instead of failing silently
+These three additions (`skipWaiting`, `clientsClaim`, `cleanupOutdatedCaches`) ensure that when a new version is deployed, users get fresh assets immediately instead of being stuck on a stale cache that shows a blank page.
 
