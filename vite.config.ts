@@ -49,9 +49,12 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        navigateFallback: "index.html",
-        navigateFallbackDenylist: [/^\/~oauth/],
+      skipWaiting: true,
+      clientsClaim: true,
+      cleanupOutdatedCaches: true,
+      globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+      navigateFallback: "index.html",
+      navigateFallbackDenylist: [/^\/~oauth/, /\?__lovable_token=/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
