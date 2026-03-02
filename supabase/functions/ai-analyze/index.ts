@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     // Input size validation
     const MAX_TEXT_LENGTH = 50000;
-    const MAX_PROMPT_LENGTH = 2000;
+    const MAX_PROMPT_LENGTH = 50000;
 
     if (typeof text !== "string" || text.length > MAX_TEXT_LENGTH) {
       return new Response(

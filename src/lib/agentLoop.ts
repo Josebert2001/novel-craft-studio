@@ -177,12 +177,15 @@ Current chapter content is provided below. Use this context when analyzing.`;
 
     // Synthesize
     const maxWords = getMaxWords(settings?.responseStyle);
-    const synthesisPrompt = `${systemPrompt}\n\nCHAPTER CONTENT:\n${contentToAnalyze}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${Object.entries(toolResults)
+    const toolResultsStr = Object.entries(toolResults)
       .map(([tool, res]) => `${tool}:\n${res}`)
-      .join("\n\n---\n\n")}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most. Keep it under ${maxWords} words.`;
+      .join("\n\n---\n\n");
+
+    const systemInstruction = `${systemPrompt}\n\nKeep response under ${maxWords} words.`;
+    const userContent = `CHAPTER CONTENT:\n${contentToAnalyze}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${toolResultsStr}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most.`;
 
     console.log("[AgentLoop] Synthesizing results...");
-    const synthesisResult = await analyzeText("Synthesize", synthesisPrompt);
+    const synthesisResult = await analyzeText(userContent, systemInstruction);
 
     return {
       response: synthesisResult.result || "I analyzed your chapter but couldn't generate a response.",
