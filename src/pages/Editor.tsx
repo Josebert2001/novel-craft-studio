@@ -18,6 +18,7 @@ import StoryBible from "../components/StoryBible";
 import { WelcomeModal } from "../components/WelcomeModal";
 import FloatingAiToolbar from "../components/FloatingAiToolbar";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
+import WritingAgent from "../components/WritingAgent";
 
 interface Chapter {
   id: string;
@@ -45,7 +46,7 @@ const Editor = () => {
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-  const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible">("coach");
+  const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible" | "agent">("agent");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [bookId, setBookId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
@@ -966,6 +967,7 @@ const Editor = () => {
           {/* Tab Bar */}
           <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
             {[
+              { id: "agent" as const, label: "🤖", title: "Agent" },
               { id: "coach" as const, label: "✨", title: "Coach" },
               { id: "heatmap" as const, label: "🎨", title: "Heatmap" },
               { id: "ghost" as const, label: "👁️", title: "Ghost" },
@@ -990,6 +992,12 @@ const Editor = () => {
 
           {/* Tab Content */}
           <div key={rightTab} className="flex-1 overflow-y-auto p-4 animate-fade-in">
+            {rightTab === "agent" && (
+              <WritingAgent
+                chapterContent={currentChapter?.content || ""}
+                selectedText={selectedText}
+              />
+            )}
             {rightTab === "coach" && (
               <>
                 <h2 className="font-semibold text-foreground mb-4">Craft Coach</h2>
