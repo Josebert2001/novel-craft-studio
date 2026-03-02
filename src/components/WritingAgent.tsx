@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Loader2, Bot, Trash2, Download } from "lucide-react";
-import { runAgentLoop, type ToolExecution } from "@/lib/agentLoop";
+import { runAgentLoop, type ToolExecution, type AgentLoopSettings } from "@/lib/agentLoop";
 import AgentSettingsDialog, { useAgentSettings } from "@/components/AgentSettings";
 
 interface Message {
@@ -115,6 +115,12 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
         role: m.role === "user" ? "user" as const : "assistant" as const,
         content: m.content,
       }));
+      const loopSettings: AgentLoopSettings = {
+        responseStyle: settings.responseStyle,
+        enabledTools: settings.enabledTools,
+        contextWindow: settings.contextWindow,
+        selectedText: selectedText,
+      };
       const result = await runAgentLoop(
         text,
         chapterContent,
@@ -127,7 +133,9 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
             }
             return [...prev, tool];
           });
-        }
+        },
+        5,
+        loopSettings
       );
 
       const agentMessage: Message = {
