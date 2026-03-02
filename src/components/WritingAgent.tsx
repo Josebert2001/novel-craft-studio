@@ -110,10 +110,14 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
     setActiveTools([]);
 
     try {
+      const history = messages.map((m) => ({
+        role: m.role === "user" ? "user" as const : "assistant" as const,
+        content: m.content,
+      }));
       const result = await runAgentLoop(
         text,
         chapterContent,
-        [],
+        history,
         (tool) => {
           setActiveTools((prev) => {
             const existing = prev.find((t) => t.toolName === tool.toolName);
