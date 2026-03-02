@@ -995,6 +995,8 @@ const Editor = () => {
             {rightTab === "agent" && (
               <WritingAgent
                 chapterContent={currentChapter?.content || ""}
+                chapterId={currentChapterId}
+                chapterTitle={currentChapter?.title}
                 selectedText={selectedText}
               />
             )}
