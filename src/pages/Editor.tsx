@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
   PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
-  Loader2, GripVertical, Maximize2, Minimize2, WifiOff,
+  Loader2, GripVertical, Maximize2, Minimize2, WifiOff, Sun, Moon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import GhostReader from "../components/GhostReader";
 import StoryBible from "../components/StoryBible";
 import { WelcomeModal } from "../components/WelcomeModal";
 import FloatingAiToolbar from "../components/FloatingAiToolbar";
+import KeyboardShortcuts from "../components/KeyboardShortcuts";
 
 interface Chapter {
   id: string;
@@ -48,6 +49,10 @@ const Editor = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [bookId, setBookId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem("ichen_dark_mode");
+    return stored === "true";
+  });
   const [showFocusHint, setShowFocusHint] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
@@ -110,7 +115,7 @@ const Editor = () => {
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
 
-  // ─── Focus mode keyboard shortcut ───
+  // ─── Keyboard shortcuts (focus mode) ───
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "f") {
@@ -278,6 +283,25 @@ const Editor = () => {
     },
     [user]
   );
+
+  // ─── Ctrl+S save shortcut ───
+  useEffect(() => {
+    const handleSaveShortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        const ch = chapters.find((c) => c.id === currentChapterId);
+        if (ch) saveToSupabase(ch.id, ch.content, ch.wordCount);
+      }
+    };
+    window.addEventListener("keydown", handleSaveShortcut);
+    return () => window.removeEventListener("keydown", handleSaveShortcut);
+  }, [chapters, currentChapterId, saveToSupabase]);
+
+  // ─── Dark mode effect ───
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("ichen_dark_mode", String(darkMode));
+  }, [darkMode]);
 
   const currentWordCountRef = useRef<number>(0);
   const pendingContentRef = useRef<{ chapterId: string; content: string } | null>(null);
@@ -448,6 +472,14 @@ const Editor = () => {
   const cancelEditingChapterTitle = () => {
     setEditingChapterId(null);
     setEditingChapterTitle("");
+  };
+
+  // ─── Chapter completion toggle ───
+  const handleToggleComplete = async (e: React.MouseEvent, chapterId: string) => {
+    e.stopPropagation();
+    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, isComplete: !ch.isComplete } : ch)));
+    // Note: chapters table doesn't have is_complete column yet, so we persist locally
+    // TODO: Add is_complete column to chapters table
   };
 
   // ─── Drag-and-drop reordering ───
@@ -690,6 +722,14 @@ const Editor = () => {
               </button>
             </div>
           )}
+          {/* Dark mode toggle */}
+          <button
+            onClick={() => setDarkMode((v) => !v)}
+            className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
           {/* Focus mode toggle */}
           <button
             onClick={() => setFocusMode((v) => !v)}
@@ -771,7 +811,17 @@ const Editor = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {chapter.isComplete && <Check className="h-4 w-4 text-green-600" />}
+                    <button
+                      onClick={(e) => handleToggleComplete(e, chapter.id)}
+                      className={`p-0.5 rounded transition-colors ${
+                        chapter.isComplete
+                          ? "text-green-600 hover:text-green-700"
+                          : "text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100"
+                      }`}
+                      title={chapter.isComplete ? "Mark as draft" : "Mark as complete"}
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={(e) => handleDeleteChapter(e, chapter.id)}
                       className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity"
@@ -810,6 +860,8 @@ const Editor = () => {
               </button>
             </div>
           </div>
+
+          <KeyboardShortcuts />
         </aside>
 
         {/* Center Editor */}

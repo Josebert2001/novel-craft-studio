@@ -323,3 +323,14 @@
   color: hsl(var(--foreground) / 0.7);
   font-style: italic;
 }
+
+/* Mobile responsive padding */
+@media (max-width: 640px) {
+  .lexical-content-editable {
+    padding: 32px 16px;
+  }
+  .lexical-placeholder {
+    top: 32px;
+    left: 16px;
+  }
+}
