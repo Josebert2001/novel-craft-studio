@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Settings, Bot, Trash2, Download } from "lucide-react";
+import { Send, Loader2, Bot, Trash2, Download } from "lucide-react";
 import { runAgentLoop, type ToolExecution } from "@/lib/agentLoop";
+import AgentSettingsDialog, { useAgentSettings } from "@/components/AgentSettings";
 
 interface Message {
   id: string;
@@ -52,6 +53,7 @@ const isConversationStale = (messages: Message[]): boolean => {
 };
 
 export default function WritingAgent({ chapterContent, chapterId, chapterTitle, selectedText }: WritingAgentProps) {
+  const { settings, updateSettings } = useAgentSettings();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -240,9 +242,7 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
               </button>
             </>
           )}
-          <button className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors">
-            <Settings className="h-3.5 w-3.5" />
-          </button>
+          <AgentSettingsDialog settings={settings} onSave={updateSettings} />
         </div>
       </div>
 
