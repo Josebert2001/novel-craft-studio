@@ -60,17 +60,38 @@ const selectTools = (message: string): string[] => {
   return tools;
 };
 
+const getMaxWords = (style?: "concise" | "balanced" | "detailed"): number => {
+  switch (style) {
+    case "concise": return 100;
+    case "detailed": return 400;
+    default: return 200;
+  }
+};
+
+export interface AgentLoopSettings {
+  responseStyle?: "concise" | "balanced" | "detailed";
+  enabledTools?: string[];
+  contextWindow?: "full" | "selection";
+  selectedText?: string;
+}
+
 export const runAgentLoop = async (
   userMessage: string,
   chapterContent: string,
   conversationHistory: AgentMessage[] = [],
   onToolUpdate?: (tool: ToolExecution) => void,
-  maxIterations: number = 5
+  maxIterations: number = 5,
+  settings?: AgentLoopSettings
 ): Promise<AgentLoopResult> => {
   const toolsUsed: string[] = [];
   let iterations = 0;
 
   const hasMemory = conversationHistory.length > 0;
+
+  // Determine content based on contextWindow setting
+  const contentToAnalyze = settings?.contextWindow === "selection" && settings.selectedText
+    ? settings.selectedText
+    : chapterContent;
 
   const systemPrompt = `You are an expert book editor with memory of our ongoing conversation. You remember what we've discussed before and can build on previous analysis.
 
@@ -99,7 +120,14 @@ IMPORTANT RULES:
 Current chapter content is provided below. Use this context when analyzing.`;
 
   try {
-    const toolsToUse = selectTools(userMessage);
+    // Filter tools by enabled settings
+    let toolsToUse = selectTools(userMessage);
+    if (settings?.enabledTools) {
+      toolsToUse = toolsToUse.filter((t) => settings.enabledTools!.includes(t));
+      if (toolsToUse.length === 0 && settings.enabledTools.length > 0) {
+        toolsToUse.push(settings.enabledTools[0]);
+      }
+    }
     console.log("[AgentLoop] Selected tools:", toolsToUse);
 
     const toolResults: Record<string, string> = {};
@@ -117,12 +145,12 @@ Current chapter content is provided below. Use this context when analyzing.`;
 
       const args: Record<string, unknown> = {};
       if (toolName === "generate_branches") {
-        args.text = chapterContent.slice(0, 500);
+        args.text = contentToAnalyze.slice(0, 500);
         args.count = 2;
       } else if (toolName === "check_consistency") {
-        args.currentChapter = chapterContent;
+        args.currentChapter = contentToAnalyze;
       } else {
-        args.content = chapterContent;
+        args.content = contentToAnalyze;
       }
 
       const { result, error } = await executeAgentTool(toolName, args);
@@ -148,9 +176,10 @@ Current chapter content is provided below. Use this context when analyzing.`;
     }
 
     // Synthesize
-    const synthesisPrompt = `${systemPrompt}\n\nCHAPTER CONTENT:\n${chapterContent}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${Object.entries(toolResults)
+    const maxWords = getMaxWords(settings?.responseStyle);
+    const synthesisPrompt = `${systemPrompt}\n\nCHAPTER CONTENT:\n${contentToAnalyze}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${Object.entries(toolResults)
       .map(([tool, res]) => `${tool}:\n${res}`)
-      .join("\n\n---\n\n")}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most. Keep it under 200 words.`;
+      .join("\n\n---\n\n")}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most. Keep it under ${maxWords} words.`;
 
     console.log("[AgentLoop] Synthesizing results...");
     const synthesisResult = await analyzeText("Synthesize", synthesisPrompt);
