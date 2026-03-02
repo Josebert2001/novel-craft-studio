@@ -1,23 +1,25 @@
 
 
-## Redesign the Writing Canvas to Match Reference
+## Implement 5 Missing Features
 
-The reference image shows a clean, elevated white card sitting on a light gray background — like a real sheet of paper. The text area has generous padding, a subtle border/shadow, and rounded corners. Currently, the editor canvas has no card-like container; it's just a flat white area.
+### 1. Add Password Reset Flow
+- **`src/pages/Auth.tsx`**: Add a "Forgot password?" link below the sign-in form that calls `supabase.auth.resetPasswordForEmail()` with a simple inline flow (enter email, submit, show success message).
+- **`src/pages/ResetPassword.tsx`**: New page that handles the Supabase recovery redirect. Lets user enter a new password and calls `supabase.auth.updateUser({ password })`.
+- **`src/App.tsx`**: Add `/reset-password` route.
 
-### Changes
+### 2. Integrate Keyboard Shortcuts into Editor
+- **`src/pages/Editor.tsx`**: Import and render `KeyboardShortcuts` at the bottom of the left sidebar (below the chapter list). Also wire up global `keydown` listeners for Ctrl+S (save), Escape (exit focus mode), and Ctrl+Shift+F (toggle focus mode) since those are referenced in the UI but may not be fully connected.
 
-**1. `src/pages/Editor.tsx` (line ~873-874)** — Wrap the editor in a card-like container with shadow, border, and rounded corners:
-- The outer scrollable area gets a light muted background (`bg-muted/30`) to create contrast
-- The inner `div` holding `LexicalEditor` gets `bg-white rounded-xl border shadow-sm` styling to create the elevated paper effect
-- Add generous horizontal padding inside the card
+### 3. Add Chapter Completion Toggle
+- **`src/pages/Editor.tsx`**: Add a small checkbox or toggle icon next to each chapter in the sidebar to mark it as complete. Update the `isComplete` field in local state and persist to Supabase on toggle. Show a subtle visual indicator (e.g., strikethrough or check icon) for completed chapters.
 
-**2. `src/App.css` (`.lexical-content-editable`)** — Increase padding to ~`60px 48px` for more breathing room inside the card, matching the spacious feel in the reference. Adjust placeholder position to match.
+### 4. Add Dark Mode Toggle
+- **`src/pages/Editor.tsx`**: Add a Sun/Moon icon button in the header bar. Clicking it toggles `document.documentElement.classList.toggle('dark')` and persists the preference to `localStorage`.
 
-**3. `src/App.css` (`.lexical-editor-container`)** — Set `background-color: white` and add `border-radius: inherit` so it respects the card's rounded corners.
+### 5. Fix Mobile Editor Padding
+- **`src/App.css`**: Add a media query to reduce `.lexical-content-editable` padding on small screens (e.g., `padding: 32px 16px` below 640px) and adjust `.lexical-placeholder` to match.
 
-### Visual Result
-- Light gray/muted background behind the writing area (like the reference)
-- White, rounded, subtly shadowed card containing the text — feels like paper
-- Generous internal padding for a premium, distraction-free writing feel
-- Toolbar floats above the card as it already does
+### Technical Details
+
+All changes use existing patterns: Tailwind classes, Supabase client calls, localStorage for preferences, Lucide icons. No new dependencies needed. The reset password page reuses the Auth page's styling patterns.
 
