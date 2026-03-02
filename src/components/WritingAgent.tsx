@@ -8,6 +8,7 @@ interface Message {
   role: "user" | "agent";
   content: string;
   toolsUsed?: string[];
+  usedMemory?: boolean;
   timestamp: number;
 }
 
@@ -134,6 +135,7 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
         role: "agent",
         content: result.response || result.error || "I couldn't generate a response.",
         toolsUsed: result.toolsUsed,
+        usedMemory: result.usedMemory,
         timestamp: Date.now(),
       };
 
@@ -319,9 +321,14 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
               }`}
             >
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-              {msg.toolsUsed && msg.toolsUsed.length > 0 && (
+              {(msg.usedMemory || (msg.toolsUsed && msg.toolsUsed.length > 0)) && (
                 <div className="flex flex-wrap gap-1 mt-2 pt-1.5 border-t border-border/30">
-                  {msg.toolsUsed.map((tool) => (
+                  {msg.usedMemory && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                      📝 Using previous analysis
+                    </span>
+                  )}
+                  {msg.toolsUsed?.map((tool) => (
                     <span
                       key={tool}
                       className="text-[10px] px-1.5 py-0.5 rounded bg-background/50 text-muted-foreground"

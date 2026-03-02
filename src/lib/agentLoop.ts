@@ -17,6 +17,7 @@ export interface AgentLoopResult {
   response: string;
   toolsUsed: string[];
   iterations: number;
+  usedMemory: boolean;
   error?: string;
 }
 
@@ -69,7 +70,9 @@ export const runAgentLoop = async (
   const toolsUsed: string[] = [];
   let iterations = 0;
 
-  const systemPrompt = `You are an expert book editor helping an author improve their manuscript. You have access to analytical tools to help you provide strategic feedback.
+  const hasMemory = conversationHistory.length > 0;
+
+  const systemPrompt = `You are an expert book editor with memory of our ongoing conversation. You remember what we've discussed before and can build on previous analysis.
 
 Available tools:
 ${AGENT_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join("\n")}
@@ -79,6 +82,11 @@ When the user asks a question:
 2. Use the tools to gather information
 3. Synthesize the results into clear, actionable advice
 
+When answering follow-up questions:
+- Reference previous findings when relevant
+- Don't repeat analysis you've already done unless asked
+- Build on earlier insights to provide deeper, evolving feedback
+
 IMPORTANT RULES:
 - Use tools strategically - don't call every tool for every question
 - If a question is simple, answer directly without tools
@@ -86,6 +94,7 @@ IMPORTANT RULES:
 - Be concise but thorough
 - Always explain WHY something needs fixing, not just WHAT to fix
 - Respect the author's voice - suggest, don't dictate
+- If building on previous analysis, briefly mention what you're referencing
 
 Current chapter content is provided below. Use this context when analyzing.`;
 
@@ -150,6 +159,7 @@ Current chapter content is provided below. Use this context when analyzing.`;
       response: synthesisResult.result || "I analyzed your chapter but couldn't generate a response.",
       toolsUsed,
       iterations,
+      usedMemory: hasMemory,
     };
   } catch (error) {
     console.error("[AgentLoop] Error:", error);
@@ -157,6 +167,7 @@ Current chapter content is provided below. Use this context when analyzing.`;
       response: "",
       toolsUsed,
       iterations,
+      usedMemory: hasMemory,
       error: "An error occurred while analyzing your chapter.",
     };
   }
