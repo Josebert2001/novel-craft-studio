@@ -302,6 +302,37 @@ const Auth = () => {
                 </div>
               )}
 
+              {/* Forgot password */}
+              {mode === "signin" && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email) {
+                        setError("Enter your email first, then click Forgot password.");
+                        return;
+                      }
+                      setLoading(true);
+                      setError("");
+                      try {
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        if (error) throw error;
+                        setSuccess(true);
+                      } catch (err: unknown) {
+                        setError(err instanceof Error ? err.message : "Failed to send reset email.");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
