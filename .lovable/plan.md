@@ -1,58 +1,23 @@
 
 
-## Fix PWA Service Worker Deployment Issues
+## Redesign the Writing Canvas to Match Reference
 
-The reported problem: users visiting the deployed site see a blank page because the service worker serves stale cached assets after a new deployment. The cached `index.html` references old JS/CSS filenames that no longer exist on the server.
+The reference image shows a clean, elevated white card sitting on a light gray background — like a real sheet of paper. The text area has generous padding, a subtle border/shadow, and rounded corners. Currently, the editor canvas has no card-like container; it's just a flat white area.
 
-### Root Cause
+### Changes
 
-The current PWA config uses `registerType: "autoUpdate"` with broad caching (`globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"]`). When a new version is deployed:
-1. The old service worker serves cached `index.html` pointing to old asset filenames
-2. Those old assets return 404s from the server
-3. The user sees a blank page until the service worker update cycle completes (which may never succeed if the page can't load enough to trigger it)
+**1. `src/pages/Editor.tsx` (line ~873-874)** — Wrap the editor in a card-like container with shadow, border, and rounded corners:
+- The outer scrollable area gets a light muted background (`bg-muted/30`) to create contrast
+- The inner `div` holding `LexicalEditor` gets `bg-white rounded-xl border shadow-sm` styling to create the elevated paper effect
+- Add generous horizontal padding inside the card
 
-### What Changes
+**2. `src/App.css` (`.lexical-content-editable`)** — Increase padding to ~`60px 48px` for more breathing room inside the card, matching the spacious feel in the reference. Adjust placeholder position to match.
 
-1. **Add `skipWaiting: true` to workbox config** -- forces the new service worker to activate immediately instead of waiting for all tabs to close.
+**3. `src/App.css` (`.lexical-editor-container`)** — Set `background-color: white` and add `border-radius: inherit` so it respects the card's rounded corners.
 
-2. **Add `clientsClaim: true`** -- makes the new service worker take control of existing pages right away.
-
-3. **Narrow `globPatterns`** -- exclude overly broad patterns; only precache the essentials (`index.html`, icons, manifest).
-
-4. **Add `cleanupOutdatedCaches: true`** -- removes old cache entries from previous service worker versions that no longer match.
-
-5. **Exclude the Lovable preview token paths** -- add `navigateFallbackDenylist` entries for preview/token URLs that should never be cached.
-
-### Technical Details
-
-**File modified:** `vite.config.ts`
-
-Changes to the `workbox` section of `VitePWA()`:
-
-```
-workbox: {
-  skipWaiting: true,
-  clientsClaim: true,
-  cleanupOutdatedCaches: true,
-  globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-  navigateFallback: "index.html",
-  navigateFallbackDenylist: [/^\/~oauth/, /\?__lovable_token=/],
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "supabase-api-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24,
-        },
-        networkTimeoutSeconds: 5,
-      },
-    },
-  ],
-},
-```
-
-These three additions (`skipWaiting`, `clientsClaim`, `cleanupOutdatedCaches`) ensure that when a new version is deployed, users get fresh assets immediately instead of being stuck on a stale cache that shows a blank page.
+### Visual Result
+- Light gray/muted background behind the writing area (like the reference)
+- White, rounded, subtly shadowed card containing the text — feels like paper
+- Generous internal padding for a premium, distraction-free writing feel
+- Toolbar floats above the card as it already does
 
