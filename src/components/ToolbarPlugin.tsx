@@ -113,7 +113,7 @@ export default function ToolbarPlugin() {
       className={`toolbar-button ${isActive ? 'toolbar-button-active' : ''}`}
       type="button"
     >
-      <Icon size={18} />
+      <Icon size={16} />
     </button>
   );
 
