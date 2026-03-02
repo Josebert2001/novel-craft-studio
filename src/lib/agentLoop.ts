@@ -129,10 +129,19 @@ Current chapter content is provided below. Use this context when analyzing.`;
       onToolUpdate?.({ toolName, status: "complete", result });
     }
 
+    // Build conversation memory (last 3 pairs)
+    let conversationContext = "";
+    if (conversationHistory.length > 0) {
+      const recent = conversationHistory.slice(-6); // last 3 pairs max
+      conversationContext = "\n\nPREVIOUS CONVERSATION:\n" +
+        recent.map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`).join("\n\n") +
+        "\n\n---\n";
+    }
+
     // Synthesize
-    const synthesisPrompt = `${systemPrompt}\n\nCHAPTER CONTENT:\n${chapterContent}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${Object.entries(toolResults)
+    const synthesisPrompt = `${systemPrompt}\n\nCHAPTER CONTENT:\n${chapterContent}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${Object.entries(toolResults)
       .map(([tool, res]) => `${tool}:\n${res}`)
-      .join("\n\n---\n\n")}\n\nBased on these tool results, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most. Keep it under 200 words.`;
+      .join("\n\n---\n\n")}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most. Keep it under 200 words.`;
 
     console.log("[AgentLoop] Synthesizing results...");
     const synthesisResult = await analyzeText("Synthesize", synthesisPrompt);
