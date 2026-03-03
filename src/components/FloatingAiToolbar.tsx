@@ -162,6 +162,31 @@ export default function FloatingAiToolbar({
             {feedback}
           </p>
           <div className="flex gap-2 mt-2.5">
+            {onApplySuggestion && (() => {
+              const rewritePatterns = [
+                /\*\*Try this instead:\*\*/i,
+                /\*\*Polish it to:\*\*/i,
+                /\*\*Fix it like this:\*\*/i,
+                /"[^"]{10,}"/,
+              ];
+              const hasRewrite = rewritePatterns.some((p) => p.test(feedback));
+              if (!hasRewrite) return null;
+              const extractRewrite = (text: string): string => {
+                const m = text.match(/\*\*(?:Try this instead|Polish it to|Fix it like this):\*\*\s*"([^"]+)"/i);
+                if (m?.[1]) return m[1];
+                const q = text.match(/"([^"]{10,})"/);
+                return q?.[1] || text.replace(/\*\*/g, "").substring(0, 150).trim();
+              };
+              return (
+                <button
+                  onClick={() => onApplySuggestion(extractRewrite(feedback))}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Check className="h-3 w-3" />
+                  Apply
+                </button>
+              );
+            })()}
             <button
               onClick={handleCopy}
               className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium border border-border rounded-md hover:bg-muted transition-colors"
