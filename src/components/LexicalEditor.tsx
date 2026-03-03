@@ -15,13 +15,17 @@ import { ListItemNode, ListNode } from '@lexical/list';
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
 import { AutoLinkNode, LinkNode } from '@lexical/link';
 import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
-import { EditorState } from 'lexical';
+import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { useEffect, forwardRef, useImperativeHandle } from 'react';
 import ToolbarPlugin from './ToolbarPlugin';
 import WordCountPlugin from './WordCountPlugin';
 import { SceneBreakNode } from './SceneBreakNode';
 
-
+export interface LexicalEditorHandle {
+  getEditor: () => LexicalEditorType | null;
+}
 
 interface LexicalEditorProps {
   initialContent?: string;
@@ -30,12 +34,26 @@ interface LexicalEditorProps {
   placeholder?: string;
 }
 
-export default function LexicalEditor({
+function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditorType | null> }) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor, editorRef]);
+  return null;
+}
+
+const LexicalEditorComponent = forwardRef<LexicalEditorHandle, LexicalEditorProps>(({
   initialContent = '',
   onChange,
   onWordCountChange,
   placeholder = 'Start writing your story...',
-}: LexicalEditorProps) {
+}, ref) => {
+  const internalEditorRef = { current: null as LexicalEditorType | null };
+
+  useImperativeHandle(ref, () => ({
+    getEditor: () => internalEditorRef.current,
+  }));
+
   const editorConfig: InitialConfigType = {
     namespace: 'NovelCraftEditor',
     theme: {
@@ -74,7 +92,6 @@ export default function LexicalEditor({
     ],
     editorState: initialContent ? (() => {
       try {
-        // Validate it's a proper Lexical JSON (has "root" key)
         const parsed = JSON.parse(initialContent);
         if (parsed && parsed.root) {
           return initialContent;
@@ -99,6 +116,7 @@ export default function LexicalEditor({
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div className="lexical-editor-container">
+        <EditorRefPlugin editorRef={internalEditorRef as React.MutableRefObject<LexicalEditorType | null>} />
         <ToolbarPlugin />
         {onWordCountChange && <WordCountPlugin onWordCountChange={onWordCountChange} />}
         <MarkdownShortcutPlugin />
@@ -121,4 +139,8 @@ export default function LexicalEditor({
       </div>
     </LexicalComposer>
   );
-}
+});
+
+LexicalEditorComponent.displayName = 'LexicalEditor';
+
+export default LexicalEditorComponent;
