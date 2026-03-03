@@ -693,6 +693,24 @@ const Editor = () => {
             addFeedbackToHistory(persona, selectedText, feedbackText);
           }
         }}
+        onApplySuggestion={(text) => {
+          const editor = editorRef.current?.getEditor();
+          if (editor) {
+            editor.update(() => {
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                selection.insertRawText(text);
+                toast({ title: "Suggestion applied", description: "The selected text has been replaced." });
+              } else {
+                navigator.clipboard.writeText(text);
+                toast({ title: "Suggestion copied", description: "No text selected — suggestion copied to clipboard instead." });
+              }
+            });
+          } else {
+            navigator.clipboard.writeText(text);
+            toast({ title: "Suggestion copied", description: "Suggestion copied to clipboard." });
+          }
+        }}
       />
 
       {/* Focus mode hint */}
