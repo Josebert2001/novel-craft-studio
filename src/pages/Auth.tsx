@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 
+// Apply dark mode from localStorage on mount
+const applyDarkMode = () => {
+  const stored = localStorage.getItem("ichen_dark_mode");
+  if (stored === "true") document.documentElement.classList.add("dark");
+};
+
 const PASSWORD_MIN = 6;
 
 const getPasswordStrength = (pw: string): { score: number; label: string; color: string } => {
@@ -22,6 +28,9 @@ const getPasswordStrength = (pw: string): { score: number; label: string; color:
 const Auth = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+
+  // Propagate dark mode
+  useEffect(() => { applyDarkMode(); }, []);
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -99,13 +108,13 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-primary/5 border-r border-border">
-        <Link to="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="ICHEN Manuscript" className="h-9 w-auto" />
-          <span className="font-bold text-lg text-foreground tracking-tight">ICHEN Manuscript</span>
-        </Link>
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] flex-col justify-center p-12 bg-primary/5 border-r border-border">
+        <div className="max-w-lg space-y-8">
+          <Link to="/" className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="ICHEN Manuscript" className="h-9 w-auto" />
+            <span className="font-bold text-lg text-foreground tracking-tight">ICHEN Manuscript</span>
+          </Link>
 
-        <div className="space-y-8">
           <div>
             <h1 className="text-4xl font-bold text-foreground leading-tight mb-4">
               The AI editor that<br />walks beside you
@@ -130,11 +139,11 @@ const Auth = () => {
               </div>
             ))}
           </div>
-        </div>
 
-        <p className="text-xs text-muted-foreground">
-          No credit card required. Free to start.
-        </p>
+          <p className="text-xs text-muted-foreground">
+            No credit card required. Free to start.
+          </p>
+        </div>
       </div>
 
       {/* Right panel — form */}

@@ -4,6 +4,7 @@ import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
   PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
   Loader2, GripVertical, Maximize2, Minimize2, WifiOff, Sun, Moon,
+  Bot, Sparkles, BarChart3, Eye, GitBranch, BookMarked, Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,17 @@ import { WelcomeModal } from "../components/WelcomeModal";
 import FloatingAiToolbar from "../components/FloatingAiToolbar";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import WritingAgent from "../components/WritingAgent";
+import { ErrorBoundary } from "../components/ErrorBoundary";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Chapter {
   id: string;
@@ -40,6 +52,7 @@ const Editor = () => {
   };
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chapterToDelete, setChapterToDelete] = useState<string | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
@@ -418,6 +431,13 @@ const Editor = () => {
       toast({ title: "Cannot delete", description: "You must have at least one chapter." });
       return;
     }
+    setChapterToDelete(chapterId);
+  };
+
+  const confirmDeleteChapter = async () => {
+    const chapterId = chapterToDelete;
+    if (!chapterId) return;
+    setChapterToDelete(null);
     if (chapterLoading) return;
     setChapterLoading("deleting");
 
@@ -440,9 +460,21 @@ const Editor = () => {
     setChapterLoading(null);
   };
 
+  const isInitialLoadRef = useRef(true);
+
+  // Reset initial load flag when switching chapters
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+  }, [currentChapterId]);
+
   const handleWordCountChange = (wordCount: number) => {
     currentWordCountRef.current = wordCount;
     setChapters((prev) => prev.map((ch) => (ch.id === currentChapterId ? { ...ch, wordCount } : ch)));
+    // Don't animate on initial chapter load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
     if (wordCountTimerRef.current) clearTimeout(wordCountTimerRef.current);
     setWordCountJustChanged(true);
     wordCountTimerRef.current = setTimeout(() => setWordCountJustChanged(false), 800);
@@ -625,6 +657,24 @@ const Editor = () => {
     <div className={`flex flex-col h-screen overflow-hidden transition-colors duration-300 ${focusMode ? "bg-[hsl(40,30%,97%)]" : ""}`}>
       <WelcomeModal open={showWelcome} onClose={() => setShowWelcome(false)} />
 
+      {/* Chapter delete confirmation */}
+      <AlertDialog open={!!chapterToDelete} onOpenChange={(open) => { if (!open) setChapterToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chapter?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{chapters.find(ch => ch.id === chapterToDelete)?.title || "this chapter"}" and all its content. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteChapter} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Floating AI Toolbar on selection */}
       <FloatingAiToolbar
         selectedText={selectedText}
@@ -700,7 +750,13 @@ const Editor = () => {
               Offline
             </span>
           )}
-          <button className="hidden sm:inline-flex px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors">
+          <button
+            onClick={() => {
+              toast({ title: "Export", description: "Export feature coming soon!" });
+            }}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-md text-foreground hover:bg-muted transition-colors"
+          >
+            <Download size={14} />
             Export
           </button>
           <button
@@ -759,7 +815,7 @@ const Editor = () => {
         {/* Left Sidebar */}
         <aside className={`bg-sidebar border-r overflow-y-auto transition-all duration-300 shrink-0 z-30 ${
           leftSidebarOpen
-            ? "w-[250px] min-w-[250px] p-4 fixed md:relative top-0 bottom-0 left-0 md:inset-auto md:top-auto md:bottom-auto md:left-auto"
+            ? "w-[250px] min-w-[250px] p-4 fixed md:relative top-12 sm:top-16 md:top-auto bottom-0 left-0 md:inset-auto md:bottom-auto md:left-auto"
             : "w-0 min-w-0 p-0 overflow-hidden border-r-0"
         }`}>
           <h2 className="font-semibold text-lg text-sidebar-foreground mb-4">Chapters</h2>
@@ -851,14 +907,16 @@ const Editor = () => {
           <div className="border-t border-border mt-6 pt-4">
             <h3 className="font-semibold text-sm text-sidebar-foreground mb-3">Living Codex</h3>
             <div className="space-y-2">
-              <button className="w-full flex items-center gap-2 p-2 rounded text-sm text-foreground bg-background hover:bg-muted transition-colors cursor-pointer text-left">
+              <div className="w-full flex items-center gap-2 p-2 rounded text-sm text-muted-foreground bg-background/50 text-left opacity-60 cursor-default">
                 <span>👤</span>
-                <span>Characters (0)</span>
-              </button>
-              <button className="w-full flex items-center gap-2 p-2 rounded text-sm text-foreground bg-background hover:bg-muted transition-colors cursor-pointer text-left">
+                <span>Characters</span>
+                <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded">Soon</span>
+              </div>
+              <div className="w-full flex items-center gap-2 p-2 rounded text-sm text-muted-foreground bg-background/50 text-left opacity-60 cursor-default">
                 <span>📍</span>
-                <span>Locations (0)</span>
-              </button>
+                <span>Locations</span>
+                <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded">Soon</span>
+              </div>
             </div>
           </div>
 
@@ -961,18 +1019,18 @@ const Editor = () => {
         {/* Right Sidebar */}
         <aside className={`bg-muted border-l overflow-hidden transition-all duration-300 flex flex-col shrink-0 z-30 ${
           rightSidebarOpen
-            ? "w-[300px] sm:w-[320px] min-w-[300px] sm:min-w-[320px] xl:w-[380px] xl:min-w-[380px] 2xl:w-[420px] 2xl:min-w-[420px] fixed md:relative top-0 bottom-0 right-0 md:inset-auto md:top-auto md:bottom-auto md:right-auto"
+            ? "w-[300px] sm:w-[320px] min-w-[300px] sm:min-w-[320px] xl:w-[380px] xl:min-w-[380px] 2xl:w-[420px] 2xl:min-w-[420px] fixed md:relative top-12 sm:top-16 md:top-auto bottom-0 right-0 md:inset-auto md:bottom-auto md:right-auto"
             : "w-0 min-w-0 overflow-hidden border-l-0"
         }`}>
           {/* Tab Bar */}
           <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
             {[
-              { id: "agent" as const, label: "🤖", title: "Agent" },
-              { id: "coach" as const, label: "✨", title: "Coach" },
-              { id: "heatmap" as const, label: "🎨", title: "Heatmap" },
-              { id: "ghost" as const, label: "👁️", title: "Ghost" },
-              { id: "branch" as const, label: "🔀", title: "Branch" },
-              { id: "bible" as const, label: "📖", title: "Bible" },
+              { id: "agent" as const, icon: Bot, title: "Agent" },
+              { id: "coach" as const, icon: Sparkles, title: "Coach" },
+              { id: "heatmap" as const, icon: BarChart3, title: "Heatmap" },
+              { id: "ghost" as const, icon: Eye, title: "Ghost" },
+              { id: "branch" as const, icon: GitBranch, title: "Branch" },
+              { id: "bible" as const, icon: BookMarked, title: "Bible" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -984,7 +1042,7 @@ const Editor = () => {
                 }`}
                 title={tab.title}
               >
-                <span className="text-sm block">{tab.label}</span>
+                <tab.icon className="h-4 w-4 mx-auto" />
                 <span className="block mt-0.5">{tab.title}</span>
               </button>
             ))}
@@ -993,15 +1051,17 @@ const Editor = () => {
           {/* Tab Content */}
           <div key={rightTab} className="flex-1 overflow-y-auto p-4 animate-fade-in">
             {rightTab === "agent" && (
-              <WritingAgent
-                chapterContent={currentChapter?.content || ""}
-                chapterId={currentChapterId}
-                chapterTitle={currentChapter?.title}
-                selectedText={selectedText}
-              />
+              <ErrorBoundary fallbackTitle="Writing Agent unavailable">
+                <WritingAgent
+                  chapterContent={currentChapter?.content || ""}
+                  chapterId={currentChapterId}
+                  chapterTitle={currentChapter?.title}
+                  selectedText={selectedText}
+                />
+              </ErrorBoundary>
             )}
             {rightTab === "coach" && (
-              <>
+              <ErrorBoundary fallbackTitle="Craft Coach unavailable">
                 <h2 className="font-semibold text-foreground mb-4">Craft Coach</h2>
 
                 {/* Selection highlight indicator */}
@@ -1063,7 +1123,10 @@ const Editor = () => {
                     selectedText={selectedText}
                     totalAiRequests={totalAiRequests}
                     aiRequestLimit={10}
-                    onApplySuggestion={(text) => { console.log("Applying suggestion:", text); }}
+                    onApplySuggestion={(text) => {
+                      toast({ title: "Suggestion noted", description: "Text replacement coming soon. Suggestion copied to clipboard." });
+                      navigator.clipboard.writeText(text);
+                    }}
                     onDismiss={() => { setSelectedText(""); setSelectionPosition(null); }}
                     onAnalyze={(persona, feedbackText) => {
                       if (totalAiRequests < 10) {
@@ -1081,24 +1144,35 @@ const Editor = () => {
                     onClearAll={clearFeedbackHistory}
                   />
                 </div>
-              </>
+              </ErrorBoundary>
             )}
 
             {rightTab === "heatmap" && (
-              <EmotionHeatmap chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              <ErrorBoundary fallbackTitle="Emotion Heatmap unavailable">
+                <EmotionHeatmap chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              </ErrorBoundary>
             )}
             {rightTab === "ghost" && (
-              <GhostReader chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              <ErrorBoundary fallbackTitle="Ghost Reader unavailable">
+                <GhostReader chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              </ErrorBoundary>
             )}
             {rightTab === "branch" && (
-              <WhatIfBranching
-                selectedText={selectedText}
-                onApply={(text) => { console.log("Apply branch:", text); }}
-                onAnalyze={incrementAiUsage}
-              />
+              <ErrorBoundary fallbackTitle="What-If Branching unavailable">
+                <WhatIfBranching
+                  selectedText={selectedText}
+                  onApply={(text) => {
+                    toast({ title: "Branch merged", description: "Text copied to clipboard." });
+                    navigator.clipboard.writeText(text);
+                  }}
+                  onAnalyze={incrementAiUsage}
+                />
+              </ErrorBoundary>
             )}
             {rightTab === "bible" && (
-              <StoryBible chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              <ErrorBoundary fallbackTitle="Story Bible unavailable">
+                <StoryBible chapterContent={currentChapter?.content || ""} onAnalyze={incrementAiUsage} />
+              </ErrorBoundary>
             )}
           </div>
         </aside>

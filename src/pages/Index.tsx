@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Sparkles, GitBranch, Eye, BookMarked, ArrowRight, PenLine, Brain, BarChart3, Download } from "lucide-react";
 
@@ -53,6 +54,12 @@ const TESTIMONIALS = [
 ];
 
 const Index = () => {
+  // Propagate dark mode from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("ichen_dark_mode");
+    if (stored === "true") document.documentElement.classList.add("dark");
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
@@ -123,7 +130,7 @@ const Index = () => {
               <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link
-              to="/editor"
+              to="/auth"
               className="inline-flex items-center gap-2 px-8 py-3.5 border border-border rounded-xl font-medium text-base text-foreground hover:bg-muted transition-colors"
             >
               <BookOpen className="h-4 w-4" />
