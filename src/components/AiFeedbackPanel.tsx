@@ -98,14 +98,29 @@ export default function AiFeedbackPanel({
   };
 
   const detectIfRewrite = (text: string): boolean => {
-    return text.includes('"') || text.includes("'") || text.includes("`") || text.includes("**");
+    const patterns = [
+      /\*\*Try this instead:\*\*/i,
+      /\*\*Polish it to:\*\*/i,
+      /\*\*Fix it like this:\*\*/i,
+      /"[^"]{10,}"/,
+    ];
+    return patterns.some((p) => p.test(text));
   };
 
   const extractRewriteFromFeedback = (text: string): string => {
-    const quoteMatch = text.match(/"([^"]+)"/);
-    if (quoteMatch && quoteMatch[1]) return quoteMatch[1];
-    const backtickMatch = text.match(/`([^`]+)`/);
-    if (backtickMatch && backtickMatch[1]) return backtickMatch[1];
+    // Match structured format: **Try this instead:** "..." or **Polish it to:** "..."
+    const structuredMatch = text.match(
+      /\*\*(?:Try this instead|Polish it to|Fix it like this):\*\*\s*"([^"]+)"/i
+    );
+    if (structuredMatch?.[1]) return structuredMatch[1];
+
+    // Fallback: first long quoted string
+    const quoteMatch = text.match(/"([^"]{10,})"/);
+    if (quoteMatch?.[1]) return quoteMatch[1];
+
+    const backtickMatch = text.match(/`([^`]{10,})`/);
+    if (backtickMatch?.[1]) return backtickMatch[1];
+
     return text.replace(/\*\*/g, "").substring(0, 150).trim();
   };
 

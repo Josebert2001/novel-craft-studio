@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { $getSelection, $isRangeSelection, $createTextNode } from "lexical";
 import { useNavigate } from "react-router-dom";
 import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
@@ -9,7 +10,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import LexicalEditor from "../components/LexicalEditor";
+import LexicalEditor, { LexicalEditorHandle } from "../components/LexicalEditor";
 import AiFeedbackPanel from "../components/AiFeedbackPanel";
 import RecentFeedback, { FeedbackRecord } from "../components/RecentFeedback";
 import EmotionHeatmap from "../components/EmotionHeatmap";
@@ -85,6 +86,7 @@ const Editor = () => {
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
   const [editingChapterTitle, setEditingChapterTitle] = useState("");
   const chapterTitleInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<LexicalEditorHandle>(null);
 
   // Drag-and-drop
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -984,6 +986,7 @@ const Editor = () => {
               <div className={`flex-1 overflow-y-auto flex justify-center py-6 sm:py-10 px-3 sm:px-6 transition-all duration-300 bg-muted/30 ${focusMode ? "py-12 sm:py-16" : ""}`}>
                 <div className={`w-full transition-all duration-500 bg-background rounded-xl border border-border/40 shadow-sm ${focusMode ? "max-w-[680px]" : "max-w-[800px]"}`}>
                   <LexicalEditor
+                    ref={editorRef}
                     key={currentChapterId}
                     initialContent={currentChapter.content}
                     onChange={handleEditorChange}
@@ -1124,8 +1127,22 @@ const Editor = () => {
                     totalAiRequests={totalAiRequests}
                     aiRequestLimit={10}
                     onApplySuggestion={(text) => {
-                      toast({ title: "Suggestion noted", description: "Text replacement coming soon. Suggestion copied to clipboard." });
-                      navigator.clipboard.writeText(text);
+                      const editor = editorRef.current?.getEditor();
+                      if (editor) {
+                        editor.update(() => {
+                          const selection = $getSelection();
+                          if ($isRangeSelection(selection)) {
+                            selection.insertRawText(text);
+                            toast({ title: "Suggestion applied", description: "The selected text has been replaced." });
+                          } else {
+                            navigator.clipboard.writeText(text);
+                            toast({ title: "Suggestion copied", description: "No text selected — suggestion copied to clipboard instead." });
+                          }
+                        });
+                      } else {
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Suggestion copied", description: "Suggestion copied to clipboard." });
+                      }
                     }}
                     onDismiss={() => { setSelectedText(""); setSelectionPosition(null); }}
                     onAnalyze={(persona, feedbackText) => {
