@@ -1142,13 +1142,47 @@ const Editor = () => {
                     if (editor) {
                       editor.update(() => {
                         const root = $getRoot();
-                        const text = root.getTextContent();
-                        const before = text.substring(0, issue.offset);
-                        const after = text.substring(issue.offset + issue.length);
-                        // For now, copy replacement — full inline replace requires node-level work
-                        navigator.clipboard.writeText(replacement);
-                        toast({ title: "Fix copied", description: `"${replacement}" copied to clipboard.` });
+                        // Walk all text nodes to find the one at the right offset
+                        let globalOffset = 0;
+                        const textNodes: { node: any; start: number; end: number }[] = [];
+                        const collectTextNodes = (node: any) => {
+                          if (node.getType() === 'text') {
+                            const text = node.getTextContent();
+                            textNodes.push({ node, start: globalOffset, end: globalOffset + text.length });
+                            globalOffset += text.length;
+                          } else if (node.getType() === 'linebreak') {
+                            globalOffset += 1;
+                          } else {
+                            const children = node.getChildren?.();
+                            if (children) {
+                              for (const child of children) {
+                                collectTextNodes(child);
+                              }
+                              // Add newline for block-level elements (paragraphs, headings)
+                              if (node.getType() !== 'root') {
+                                globalOffset += 1;
+                              }
+                            }
+                          }
+                        };
+                        collectTextNodes(root);
+
+                        const issueStart = issue.offset;
+                        const issueEnd = issue.offset + issue.length;
+
+                        // Find which text nodes overlap with the issue
+                        for (const { node, start, end } of textNodes) {
+                          if (start < issueEnd && end > issueStart) {
+                            const nodeText = node.getTextContent();
+                            const replaceStart = Math.max(issueStart - start, 0);
+                            const replaceEnd = Math.min(issueEnd - start, nodeText.length);
+                            const newText = nodeText.substring(0, replaceStart) + replacement + nodeText.substring(replaceEnd);
+                            node.setTextContent(newText);
+                            break; // Handle single-node replacements for now
+                          }
+                        }
                       });
+                      toast({ title: "Fix applied", description: `Replaced with "${replacement}".` });
                     }
                     setGrammarIssues(prev => prev.filter(i => i !== issue));
                   }}
