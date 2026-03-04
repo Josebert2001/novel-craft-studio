@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { $getSelection, $isRangeSelection, $createTextNode } from "lexical";
+import { $getRoot, $getSelection, $isRangeSelection, $createTextNode } from "lexical";
 import { useNavigate } from "react-router-dom";
 import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
   PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
   Loader2, GripVertical, Maximize2, Minimize2, WifiOff, Sun, Moon,
-  Bot, Sparkles, BarChart3, Eye, GitBranch, BookMarked, Download, HelpCircle,
+  Bot, Sparkles, BarChart3, Eye, GitBranch, BookMarked, Download, HelpCircle, SpellCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,9 @@ import FloatingAiToolbar from "../components/FloatingAiToolbar";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import WritingAgent from "../components/WritingAgent";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { GrammarPanel } from "../components/GrammarPanel";
+import { checkGrammar } from "@/lib/grammarCheck";
+import type { GrammarIssue } from "@/lib/grammarCheck";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,7 +64,10 @@ const Editor = () => {
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-  const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible" | "agent">("agent");
+  const [rightTab, setRightTab] = useState<"coach" | "heatmap" | "ghost" | "branch" | "bible" | "agent" | "grammar">("agent");
+  const [grammarIssues, setGrammarIssues] = useState<GrammarIssue[]>([]);
+  const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
+  const grammarCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [bookId, setBookId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
@@ -132,6 +138,36 @@ const Editor = () => {
   });
 
   const currentChapter = chapters.find((ch) => ch.id === currentChapterId);
+
+  // ─── Grammar check ───
+  const runGrammarCheck = useCallback(() => {
+    const editor = editorRef.current?.getEditor();
+    if (!editor || !currentChapterId) return;
+
+    editor.getEditorState().read(() => {
+      const root = $getRoot();
+      const text = root.getTextContent();
+      if (text.length <= 10) return;
+
+      setIsCheckingGrammar(true);
+      checkGrammar(text).then((issues) => {
+        setGrammarIssues(issues);
+        setIsCheckingGrammar(false);
+      });
+    });
+  }, [currentChapterId]);
+
+  // Auto-run grammar check 3s after typing stops
+  useEffect(() => {
+    if (!currentChapterId) return;
+    if (grammarCheckTimeoutRef.current) clearTimeout(grammarCheckTimeoutRef.current);
+    grammarCheckTimeoutRef.current = setTimeout(() => {
+      runGrammarCheck();
+    }, 3000);
+    return () => {
+      if (grammarCheckTimeoutRef.current) clearTimeout(grammarCheckTimeoutRef.current);
+    };
+  }, [currentChapter?.content, runGrammarCheck]);
 
   // ─── Keyboard shortcuts (focus mode) ───
   useEffect(() => {
@@ -1061,6 +1097,7 @@ const Editor = () => {
           <div className="flex border-b border-border bg-background shrink-0 overflow-x-auto">
             {[
               { id: "agent" as const, icon: Bot, title: "Agent" },
+              { id: "grammar" as const, icon: SpellCheck, title: "Grammar" },
               { id: "coach" as const, icon: Sparkles, title: "Coach" },
               { id: "heatmap" as const, icon: BarChart3, title: "Heatmap" },
               { id: "ghost" as const, icon: Eye, title: "Ghost" },
@@ -1092,6 +1129,32 @@ const Editor = () => {
                   chapterId={currentChapterId}
                   chapterTitle={currentChapter?.title}
                   selectedText={selectedText}
+                />
+              </ErrorBoundary>
+            )}
+            {rightTab === "grammar" && (
+              <ErrorBoundary fallbackTitle="Grammar check unavailable">
+                <GrammarPanel
+                  issues={grammarIssues}
+                  isChecking={isCheckingGrammar}
+                  onApplyFix={(issue, replacement) => {
+                    const editor = editorRef.current?.getEditor();
+                    if (editor) {
+                      editor.update(() => {
+                        const root = $getRoot();
+                        const text = root.getTextContent();
+                        const before = text.substring(0, issue.offset);
+                        const after = text.substring(issue.offset + issue.length);
+                        // For now, copy replacement — full inline replace requires node-level work
+                        navigator.clipboard.writeText(replacement);
+                        toast({ title: "Fix copied", description: `"${replacement}" copied to clipboard.` });
+                      });
+                    }
+                    setGrammarIssues(prev => prev.filter(i => i !== issue));
+                  }}
+                  onIgnore={(issue) => {
+                    setGrammarIssues(prev => prev.filter(i => i !== issue));
+                  }}
                 />
               </ErrorBoundary>
             )}
