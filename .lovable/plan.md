@@ -1,33 +1,42 @@
 
 
-## Tutorial Overlay -- Interactive 3-Step Onboarding
+## Plan: Inline Grammar Underlines (Grammarly-style)
 
-### What We're Building
-A step-by-step tutorial overlay that highlights key areas of the editor on first use, guiding the user through: (1) writing in the canvas, (2) selecting text, and (3) clicking an AI persona. It uses spotlight-style highlighting with a tooltip at each step.
+### Approach
 
-### New File
-**`src/components/TutorialOverlay.tsx`**
-- 3 steps with title, description, and a target area indicator
-- Step 1: "Start Writing" -- points to the editor canvas area (center)
-- Step 2: "Select Your Text" -- points to the editor canvas with instruction to highlight text
-- Step 3: "Get AI Feedback" -- points to the right sidebar / AI persona buttons
-- Each step shows a card with text, a step indicator (1/3, 2/3, 3/3), and Next/Skip buttons
-- Uses a semi-transparent backdrop with a "spotlight" cutout effect (CSS box-shadow trick)
-- "Don't show again" is stored in `localStorage` key `ichen_tutorial_completed`
-- On final step, button says "Start Writing" and dismisses
+Use a **DOM overlay** technique rather than modifying Lexical nodes. This avoids conflicts with Lexical's internal state management and is how Grammarly itself works.
 
-### Editor Integration
-**`src/pages/Editor.tsx`**
-- Import `TutorialOverlay`
-- Add state: `const [showTutorial, setShowTutorial] = useState(false)`
-- After WelcomeModal closes, check if tutorial has been completed (`ichen_tutorial_completed` in localStorage). If not, show the tutorial
-- Modify `WelcomeModal`'s `onClose` to trigger tutorial: `onClose={() => { setShowWelcome(false); if (!localStorage.getItem('ichen_tutorial_completed')) setShowTutorial(true); }}`
-- Render `<TutorialOverlay open={showTutorial} onClose={() => setShowTutorial(false)} />` after the WelcomeModal
+A new `GrammarHighlightPlugin` component (inside `LexicalComposer`) will:
 
-### Design
-- Overlay: fixed full-screen, `z-[200]`, dark backdrop (`bg-black/60`)
-- Tooltip card: white card with rounded corners, positioned near the highlighted area
-- Step indicator: small dots or "Step 1 of 3" text
-- Animations: fade-in for overlay, slide-up for tooltip card
-- Consistent with existing Tailwind styling (uses `bg-background`, `text-foreground`, `border-border`)
+1. Listen for `grammarIssues` changes (passed as a prop)
+2. Walk the editor's DOM text nodes to find the character offsets matching each issue
+3. Use `Range.getClientRects()` to get pixel positions of the error text
+4. Render absolutely-positioned colored underline `<div>`s in an overlay container on top of the editor
+
+### Files to change
+
+**1. New file: `src/components/editor/GrammarHighlightPlugin.tsx`**
+- Accepts `issues: GrammarIssue[]` as prop
+- Uses `useLexicalComposerContext()` to access the editor DOM element via `editor.getRootElement()`
+- Walks DOM text nodes, tracking global character offset to map each issue's `offset`/`length` to a DOM `Range`
+- Calls `range.getClientRects()` to get bounding rectangles relative to the editor root
+- Renders an overlay `<div>` (absolute positioned, pointer-events: none) containing colored underline divs for each rect
+- Recalculates on: issues change, editor scroll, window resize, editor updates
+- Color-codes by type: red wavy for grammar/spelling, blue for style, yellow for passive
+
+**2. Update: `src/components/LexicalEditor.tsx`**
+- Accept new optional prop: `grammarIssues?: GrammarIssue[]`
+- Add `<GrammarHighlightPlugin issues={grammarIssues} />` inside the `LexicalComposer`
+
+**3. Update: `src/pages/Editor.tsx`**
+- Pass `grammarIssues={grammarIssues}` to the `<LexicalEditor>` component
+
+**4. Update: `src/App.css`**
+- Add styles for `.grammar-underline` (wavy/straight underlines using `background-image` repeating SVG pattern or `border-bottom`)
+- Red for grammar/spelling, blue for style, yellow for passive/weak-verb
+- `pointer-events: none` on the overlay container
+
+### Key technical detail
+
+The overlay recalculation uses `requestAnimationFrame` and listens to scroll/resize events so underlines stay in sync with text positions. Each underline div is ~3px tall, positioned at the bottom of the text rect.
 
