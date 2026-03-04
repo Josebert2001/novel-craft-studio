@@ -18,6 +18,7 @@ import WhatIfBranching from "../components/WhatIfBranching";
 import GhostReader from "../components/GhostReader";
 import StoryBible from "../components/StoryBible";
 import { WelcomeModal } from "../components/WelcomeModal";
+import { TutorialOverlay } from "../components/TutorialOverlay";
 import FloatingAiToolbar from "../components/FloatingAiToolbar";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import WritingAgent from "../components/WritingAgent";
@@ -92,8 +93,9 @@ const Editor = () => {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Welcome modal
+  // Welcome modal & tutorial
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Online/offline status
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -657,7 +659,8 @@ const Editor = () => {
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden transition-colors duration-300 ${focusMode ? "bg-[hsl(40,30%,97%)]" : ""}`}>
-      <WelcomeModal open={showWelcome} onClose={() => setShowWelcome(false)} />
+      <WelcomeModal open={showWelcome} onClose={() => { setShowWelcome(false); if (!localStorage.getItem('ichen_tutorial_completed')) setShowTutorial(true); }} />
+      <TutorialOverlay open={showTutorial} onClose={() => setShowTutorial(false)} />
 
       {/* Chapter delete confirmation */}
       <AlertDialog open={!!chapterToDelete} onOpenChange={(open) => { if (!open) setChapterToDelete(null); }}>
