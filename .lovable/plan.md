@@ -1,73 +1,33 @@
 
 
-## Full UI/UX Audit -- ICHEN Manuscript
+## Tutorial Overlay -- Interactive 3-Step Onboarding
 
-### Pages Reviewed
-Landing (`/`), Auth (`/auth`), Editor (`/editor`), Install (`/install`), Reset Password (`/reset-password`), 404 (`/*`)
+### What We're Building
+A step-by-step tutorial overlay that highlights key areas of the editor on first use, guiding the user through: (1) writing in the canvas, (2) selecting text, and (3) clicking an AI persona. It uses spotlight-style highlighting with a tooltip at each step.
 
----
+### New File
+**`src/components/TutorialOverlay.tsx`**
+- 3 steps with title, description, and a target area indicator
+- Step 1: "Start Writing" -- points to the editor canvas area (center)
+- Step 2: "Select Your Text" -- points to the editor canvas with instruction to highlight text
+- Step 3: "Get AI Feedback" -- points to the right sidebar / AI persona buttons
+- Each step shows a card with text, a step indicator (1/3, 2/3, 3/3), and Next/Skip buttons
+- Uses a semi-transparent backdrop with a "spotlight" cutout effect (CSS box-shadow trick)
+- "Don't show again" is stored in `localStorage` key `ichen_tutorial_completed`
+- On final step, button says "Start Writing" and dismisses
 
-### Issues Found
+### Editor Integration
+**`src/pages/Editor.tsx`**
+- Import `TutorialOverlay`
+- Add state: `const [showTutorial, setShowTutorial] = useState(false)`
+- After WelcomeModal closes, check if tutorial has been completed (`ichen_tutorial_completed` in localStorage). If not, show the tutorial
+- Modify `WelcomeModal`'s `onClose` to trigger tutorial: `onClose={() => { setShowWelcome(false); if (!localStorage.getItem('ichen_tutorial_completed')) setShowTutorial(true); }}`
+- Render `<TutorialOverlay open={showTutorial} onClose={() => setShowTutorial(false)} />` after the WelcomeModal
 
-#### Critical
-
-1. **ErrorBoundary component was never created.** Previous conversation claimed it was added and wrapped around all AI components in `Editor.tsx`, but the file `src/components/ErrorBoundary.tsx` does not exist. No imports or usage of it exist anywhere in the codebase. If any AI component throws a rendering error, the entire editor will crash with a white screen.
-
-2. **Export button does nothing.** The "Export" button in the editor header (line 703) has no `onClick` handler -- it is a dead button that will confuse users.
-
-3. **"Open Editor" on landing page bypasses auth.** The hero links directly to `/editor` without auth. While `ProtectedRoute` redirects unauthenticated users, clicking "Open Editor" sends them to `/auth` with no context about why. This is a confusing UX flow -- it should link to `/auth` directly or show a tooltip.
-
-#### High Priority
-
-4. **Living Codex buttons are non-functional.** The "Characters (0)" and "Locations (0)" buttons in the left sidebar (lines 854-861) have no `onClick` handlers. They appear interactive but do nothing.
-
-5. **`onApplySuggestion` only logs to console.** Both in the Coach tab (line 1066) and the Branch tab (line 1096), applying AI suggestions just calls `console.log` instead of actually inserting text into the editor.
-
-6. **Mobile: sidebars lack top offset.** Left and right sidebars on mobile use `fixed top-0 bottom-0` (lines 762, 964) which means they overlap the header bar. On mobile, the sidebar covers the entire screen including the header, with no close button visible -- users must tap the overlay to dismiss.
-
-7. **No loading skeleton for editor.** When switching chapters, the editor remounts (via `key={currentChapterId}`) causing a brief flash. No skeleton or transition smooths this.
-
-#### Medium Priority
-
-8. **Auth page: left panel is mostly empty space.** On desktop, the branding panel (left half) has feature bullet points positioned low, with a large empty gap above them. The vertical centering of the form on the right doesn't match the content height on the left.
-
-9. **Landing page nav items crowd on small screens.** The nav has "Install", "Sign In", and "Start Free" inline. On screens around 400-500px wide (between mobile and tablet), these items can overlap or feel cramped. The mobile screenshot shows them tight but functional.
-
-10. **404 page is too minimal.** It lacks the app logo, consistent branding, or navigation back to the editor. It feels disconnected from the rest of the app.
-
-11. **Dark mode not applied on landing/auth pages.** The dark mode toggle only exists in the editor header. If a user sets dark mode and navigates to the landing page or auth page, those pages render in light mode regardless, creating an inconsistent experience.
-
-12. **Tab labels use emoji as primary identifiers.** The right sidebar tabs (Agent, Coach, Heatmap, Ghost, Branch, Bible) use emoji as the primary visual element. On some platforms/browsers, these render inconsistently or may appear as squares.
-
-#### Low Priority / Polish
-
-13. **Word count animation fires on chapter switch.** The `wordCountJustChanged` animation triggers when loading a new chapter because `handleWordCountChange` is called, causing a brief pulse effect that wasn't user-triggered.
-
-14. **No confirmation before deleting chapters.** `handleDeleteChapter` immediately deletes without a confirmation dialog, unlike the Writing Agent's clear conversation prompt.
-
-15. **Reset password page works correctly** -- invalid/expired state, form validation, and success state are all properly handled.
-
-16. **Install page is clean and well-structured.** No issues found.
-
----
-
-### Recommended Fix Plan
-
-**Phase 1 -- Critical Fixes**
-- Create the `ErrorBoundary` component and wrap all AI components in `Editor.tsx`
-- Wire up the Export button or remove it
-- Change "Open Editor" link to go to `/auth` instead of `/editor`
-
-**Phase 2 -- Functional Fixes**
-- Remove or disable Living Codex buttons (they are PLANNED features per the project guidelines)
-- Add actual text insertion for `onApplySuggestion` (requires Lexical editor API integration)
-- Fix mobile sidebar positioning to account for header height (`top-12 sm:top-16`)
-- Add chapter delete confirmation dialog
-
-**Phase 3 -- Polish**
-- Improve 404 page with branding and navigation
-- Propagate dark mode to landing/auth pages
-- Replace emoji tab labels with Lucide icons for consistency
-- Suppress word count animation on chapter load
-- Add editor skeleton/transition when switching chapters
+### Design
+- Overlay: fixed full-screen, `z-[200]`, dark backdrop (`bg-black/60`)
+- Tooltip card: white card with rounded corners, positioned near the highlighted area
+- Step indicator: small dots or "Step 1 of 3" text
+- Animations: fade-in for overlay, slide-up for tooltip card
+- Consistent with existing Tailwind styling (uses `bg-background`, `text-foreground`, `border-border`)
 
