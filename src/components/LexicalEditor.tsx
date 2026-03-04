@@ -22,6 +22,8 @@ import { useEffect, forwardRef, useImperativeHandle } from 'react';
 import ToolbarPlugin from './ToolbarPlugin';
 import WordCountPlugin from './WordCountPlugin';
 import { SceneBreakNode } from './SceneBreakNode';
+import { GrammarHighlightPlugin } from './editor/GrammarHighlightPlugin';
+import { GrammarIssue } from '@/lib/grammarCheck';
 
 export interface LexicalEditorHandle {
   getEditor: () => LexicalEditorType | null;
@@ -32,6 +34,7 @@ interface LexicalEditorProps {
   onChange: (content: string) => void;
   onWordCountChange?: (wordCount: number) => void;
   placeholder?: string;
+  grammarIssues?: GrammarIssue[];
 }
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditorType | null> }) {
@@ -47,6 +50,7 @@ const LexicalEditorComponent = forwardRef<LexicalEditorHandle, LexicalEditorProp
   onChange,
   onWordCountChange,
   placeholder = 'Start writing your story...',
+  grammarIssues = [],
 }, ref) => {
   const internalEditorRef = { current: null as LexicalEditorType | null };
 
@@ -120,20 +124,23 @@ const LexicalEditorComponent = forwardRef<LexicalEditorHandle, LexicalEditorProp
         <ToolbarPlugin />
         {onWordCountChange && <WordCountPlugin onWordCountChange={onWordCountChange} />}
         <MarkdownShortcutPlugin />
-        <RichTextPlugin
-          contentEditable={
-            <ContentEditable
-              className="lexical-content-editable"
-              spellCheck={true}
-              role="textbox"
-              aria-label="Editor content"
-            />
-          }
-          placeholder={
-            <div className="lexical-placeholder">{placeholder}</div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
+        <div style={{ position: 'relative' }}>
+          <RichTextPlugin
+            contentEditable={
+              <ContentEditable
+                className="lexical-content-editable"
+                spellCheck={true}
+                role="textbox"
+                aria-label="Editor content"
+              />
+            }
+            placeholder={
+              <div className="lexical-placeholder">{placeholder}</div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <GrammarHighlightPlugin issues={grammarIssues} />
+        </div>
         <OnChangePlugin onChange={handleChange} />
         <HistoryPlugin />
       </div>

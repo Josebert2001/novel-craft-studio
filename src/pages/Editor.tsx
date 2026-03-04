@@ -1060,6 +1060,7 @@ const Editor = () => {
                     onChange={handleEditorChange}
                     onWordCountChange={handleWordCountChange}
                     placeholder="Start writing your story..."
+                    grammarIssues={grammarIssues}
                   />
                 </div>
               </div>
