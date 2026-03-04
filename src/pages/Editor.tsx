@@ -5,7 +5,7 @@ import {
   Check, FileText, Plus, X, PanelLeftClose, PanelLeftOpen,
   PanelRightClose, PanelRightOpen, Pencil, LogOut, Cloud, CloudOff,
   Loader2, GripVertical, Maximize2, Minimize2, WifiOff, Sun, Moon,
-  Bot, Sparkles, BarChart3, Eye, GitBranch, BookMarked, Download,
+  Bot, Sparkles, BarChart3, Eye, GitBranch, BookMarked, Download, HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -809,6 +809,17 @@ const Editor = () => {
             title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          {/* Restart tutorial */}
+          <button
+            onClick={() => {
+              localStorage.removeItem("ichen_tutorial_completed");
+              setShowTutorial(true);
+            }}
+            className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
+            title="Restart tutorial"
+          >
+            <HelpCircle size={18} />
           </button>
           {/* Focus mode toggle */}
           <button
