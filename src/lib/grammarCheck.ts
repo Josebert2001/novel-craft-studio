@@ -15,6 +15,8 @@ export interface GrammarIssue {
 }
 
 export async function checkGrammar(text: string): Promise<GrammarIssue[]> {
+  if (!text || text.length < 10) return [];
+
   try {
     const response = await fetch('https://api.languagetool.org/v2/check', {
       method: 'POST',
