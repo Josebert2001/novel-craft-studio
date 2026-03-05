@@ -15,6 +15,8 @@ export interface GrammarIssue {
 }
 
 export async function checkGrammar(text: string): Promise<GrammarIssue[]> {
+  if (!text || text.length < 10) return [];
+
   try {
     const response = await fetch('https://api.languagetool.org/v2/check', {
       method: 'POST',
@@ -42,9 +44,9 @@ export async function checkGrammar(text: string): Promise<GrammarIssue[]> {
         type = 'spelling';
       } else if (match.rule.category.id === 'STYLE') {
         type = 'style';
-      } else if (match.rule.id.includes('PASSIVE_VOICE')) {
+      } else if (match.rule.id.includes('PASSIVE_VOICE') || match.message.toLowerCase().includes('passive')) {
         type = 'passive';
-      } else if (match.rule.id.includes('WEAK_VERB')) {
+      } else if (match.rule.id.includes('WEAK') || match.message.toLowerCase().includes('weak verb')) {
         type = 'weak-verb';
       }
 
