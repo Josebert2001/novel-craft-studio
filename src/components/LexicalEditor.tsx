@@ -35,6 +35,8 @@ interface LexicalEditorProps {
   onWordCountChange?: (wordCount: number) => void;
   placeholder?: string;
   grammarIssues?: GrammarIssue[];
+  onGrammarApplyFix?: (issue: GrammarIssue, replacement: string) => void;
+  onGrammarIgnore?: (issue: GrammarIssue) => void;
 }
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditorType | null> }) {
@@ -51,6 +53,8 @@ const LexicalEditorComponent = forwardRef<LexicalEditorHandle, LexicalEditorProp
   onWordCountChange,
   placeholder = 'Start writing your story...',
   grammarIssues = [],
+  onGrammarApplyFix,
+  onGrammarIgnore,
 }, ref) => {
   const internalEditorRef = { current: null as LexicalEditorType | null };
 
@@ -139,7 +143,7 @@ const LexicalEditorComponent = forwardRef<LexicalEditorHandle, LexicalEditorProp
             }
             ErrorBoundary={LexicalErrorBoundary}
           />
-          <GrammarHighlightPlugin issues={grammarIssues} />
+          <GrammarHighlightPlugin issues={grammarIssues} onApplyFix={onGrammarApplyFix} onIgnore={onGrammarIgnore} />
         </div>
         <OnChangePlugin onChange={handleChange} />
         <HistoryPlugin />
