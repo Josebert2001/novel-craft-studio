@@ -360,7 +360,58 @@ const Editor = () => {
   const currentWordCountRef = useRef<number>(0);
   const pendingContentRef = useRef<{ chapterId: string; content: string } | null>(null);
 
-  // ─── Editor change handler ───
+  // ─── Grammar fix handlers ───
+  const handleGrammarApplyFix = useCallback((issue: GrammarIssue, replacement: string) => {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.update(() => {
+        const root = $getRoot();
+        let globalOffset = 0;
+        const textNodes: { node: any; start: number; end: number }[] = [];
+        const collectTextNodes = (node: any) => {
+          if (node.getType() === 'text') {
+            const text = node.getTextContent();
+            textNodes.push({ node, start: globalOffset, end: globalOffset + text.length });
+            globalOffset += text.length;
+          } else if (node.getType() === 'linebreak') {
+            globalOffset += 1;
+          } else {
+            const children = node.getChildren?.();
+            if (children) {
+              for (const child of children) {
+                collectTextNodes(child);
+              }
+              if (node.getType() !== 'root') {
+                globalOffset += 1;
+              }
+            }
+          }
+        };
+        collectTextNodes(root);
+
+        const issueStart = issue.offset;
+        const issueEnd = issue.offset + issue.length;
+
+        for (const { node, start, end } of textNodes) {
+          if (start < issueEnd && end > issueStart) {
+            const nodeText = node.getTextContent();
+            const replaceStart = Math.max(issueStart - start, 0);
+            const replaceEnd = Math.min(issueEnd - start, nodeText.length);
+            const newText = nodeText.substring(0, replaceStart) + replacement + nodeText.substring(replaceEnd);
+            node.setTextContent(newText);
+            break;
+          }
+        }
+      });
+      toast({ title: "Fix applied", description: `Replaced with "${replacement}".` });
+    }
+    setGrammarIssues(prev => prev.filter(i => i !== issue));
+  }, []);
+
+  const handleGrammarIgnore = useCallback((issue: GrammarIssue) => {
+    setGrammarIssues(prev => prev.filter(i => i !== issue));
+  }, []);
+
   const handleEditorChange = useCallback((content: string) => {
     const chapterId = currentChapterId;
 
@@ -1061,6 +1112,8 @@ const Editor = () => {
                     onWordCountChange={handleWordCountChange}
                     placeholder="Start writing your story..."
                     grammarIssues={grammarIssues}
+                    onGrammarApplyFix={handleGrammarApplyFix}
+                    onGrammarIgnore={handleGrammarIgnore}
                   />
                 </div>
               </div>
@@ -1138,58 +1191,8 @@ const Editor = () => {
                 <GrammarPanel
                   issues={grammarIssues}
                   isChecking={isCheckingGrammar}
-                  onApplyFix={(issue, replacement) => {
-                    const editor = editorRef.current?.getEditor();
-                    if (editor) {
-                      editor.update(() => {
-                        const root = $getRoot();
-                        // Walk all text nodes to find the one at the right offset
-                        let globalOffset = 0;
-                        const textNodes: { node: any; start: number; end: number }[] = [];
-                        const collectTextNodes = (node: any) => {
-                          if (node.getType() === 'text') {
-                            const text = node.getTextContent();
-                            textNodes.push({ node, start: globalOffset, end: globalOffset + text.length });
-                            globalOffset += text.length;
-                          } else if (node.getType() === 'linebreak') {
-                            globalOffset += 1;
-                          } else {
-                            const children = node.getChildren?.();
-                            if (children) {
-                              for (const child of children) {
-                                collectTextNodes(child);
-                              }
-                              // Add newline for block-level elements (paragraphs, headings)
-                              if (node.getType() !== 'root') {
-                                globalOffset += 1;
-                              }
-                            }
-                          }
-                        };
-                        collectTextNodes(root);
-
-                        const issueStart = issue.offset;
-                        const issueEnd = issue.offset + issue.length;
-
-                        // Find which text nodes overlap with the issue
-                        for (const { node, start, end } of textNodes) {
-                          if (start < issueEnd && end > issueStart) {
-                            const nodeText = node.getTextContent();
-                            const replaceStart = Math.max(issueStart - start, 0);
-                            const replaceEnd = Math.min(issueEnd - start, nodeText.length);
-                            const newText = nodeText.substring(0, replaceStart) + replacement + nodeText.substring(replaceEnd);
-                            node.setTextContent(newText);
-                            break; // Handle single-node replacements for now
-                          }
-                        }
-                      });
-                      toast({ title: "Fix applied", description: `Replaced with "${replacement}".` });
-                    }
-                    setGrammarIssues(prev => prev.filter(i => i !== issue));
-                  }}
-                  onIgnore={(issue) => {
-                    setGrammarIssues(prev => prev.filter(i => i !== issue));
-                  }}
+                  onApplyFix={handleGrammarApplyFix}
+                  onIgnore={handleGrammarIgnore}
                 />
               </ErrorBoundary>
             )}
