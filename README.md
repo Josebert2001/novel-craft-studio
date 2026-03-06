@@ -1,73 +1,165 @@
-# Welcome to your Lovable project
+# Novel Craft Studio (ICHEN Manuscript)
 
-## Project info
+Human-first AI-assisted writing environment for long-form fiction. The app combines a rich text editor, chapter management, and multiple AI analysis tools while keeping authors in control of final decisions.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## App Functions
 
-## How can I edit this code?
+### Authentication and Access
 
-There are several ways of editing your application.
+- Email/password sign up and sign in via Supabase Auth.
+- Password strength meter and confirm-password validation during sign up.
+- Protected `/editor` route that redirects unauthenticated users to `/auth`.
+- Sign out directly from the editor header.
 
-**Use Lovable**
+### Writing Workspace
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Rich text editing with Lexical.
+- Text formatting: bold, italic, underline.
+- Block formatting: Heading 1/2/3, bullet list, numbered list.
+- Markdown shortcuts (for headings and lists).
+- Custom scene break node (`scene-break`) rendered as a visual separator.
+- Live chapter word count from editor state.
+- Focus mode with keyboard shortcut (`Ctrl/Cmd + Shift + F`) and `Esc` to exit.
 
-Changes made via Lovable will be committed automatically to this repo.
+### Book and Chapter Management
 
-**Use your preferred IDE**
+- Automatic first-run bootstrap: creates a default book and chapter for new users.
+- Editable book title.
+- Chapter list with:
+- Add chapter.
+- Delete chapter (minimum one chapter enforced).
+- Rename chapter inline.
+- Drag-and-drop chapter reordering.
+- Per-chapter word count display in sidebar and editor.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Saving and Sync
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Debounced autosave to Supabase (about every 2 seconds after edits).
+- Manual save button in the header.
+- Sync status states:
+- `loading`
+- `syncing`
+- `synced` (with timestamp)
+- `local-only` fallback when remote sync fails.
+- Local persistence fallbacks in `localStorage` for chapter content and title.
 
-Follow these steps:
+### AI Functions
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+All AI requests go through the Supabase Edge Function `ai-analyze` and Gemini (`gemini-2.0-flash`).
+
+- AI persona coaching on selected text with 4 editorial personas:
+- The Clarity Coach
+- The Emotional Reader
+- The Plot Hunter
+- The Style Polisher
+- Floating AI toolbar appears when selecting text (`>10` chars).
+- Right-panel AI coaching tab with selection stats and usage meter.
+- Emotion Heatmap:
+- Paragraph-by-paragraph emotion scoring (joy, tension, sadness, fear).
+- Visual emotional arc chart and dominant-emotion indicators.
+- Ghost Reader:
+- Simulates first-time reader engagement by paragraph.
+- Engagement score and paragraph-level notes/suggestions.
+- What-If Branching:
+- Generates 3 alternative rewrites for selected text.
+- Story Bible:
+- Extracts structured characters, locations, and timeline events from chapter text.
+
+### AI Usage and Limits
+
+- Daily AI analysis limit: `10` requests per user (enforced server-side).
+- Limit tracking stored in `rate_limits` table.
+- UI usage tracker and warning states near the limit.
+- Recent AI feedback history (last 5 entries) saved locally:
+- Expand/collapse feedback records.
+- Delete individual records.
+- Clear all history.
+
+### Onboarding and UX
+
+- Landing page with product overview and feature highlights.
+- Welcome modal for first-time users with "Don't show again" preference.
+- Responsive left and right sidebars with mobile overlays.
+
+## Tech Stack
+
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS + shadcn/ui + Radix UI
+- Lexical editor
+- Supabase (Auth, Postgres, Edge Functions)
+- Gemini API (via edge function)
+- TanStack Query
+- Vitest + Testing Library
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+ (or newer LTS)
+- npm
+- Supabase project (for auth, DB, and edge functions)
+
+### Install and Run
+
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+cd novel-craft-studio
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+App runs on Vite default (`http://localhost:5173`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+- `npm run dev` - start local dev server
+- `npm run build` - production build
+- `npm run build:dev` - development-mode build
+- `npm run preview` - preview production build
+- `npm run lint` - run ESLint
+- `npm run test` - run tests once
+- `npm run test:watch` - run tests in watch mode
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Supabase and AI Configuration
 
-## What technologies are used for this project?
+Frontend uses `src/integrations/supabase/client.ts` for project URL and anon key.
 
-This project is built with:
+Edge function `supabase/functions/ai-analyze/index.ts` requires:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY`
 
-## How can I deploy this project?
+The edge function also includes:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- Auth verification from bearer token
+- Input size validation
+- Prompt sanitization
+- CORS allowlist handling
 
-## Can I connect a custom domain to my Lovable project?
+## Database Notes
 
-Yes, you can!
+Migrations define and secure core tables:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `profiles`
+- `books`
+- `chapters`
+- `rate_limits`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+RLS policies are enabled for user-scoped access to manuscript data.
+
+## Project Structure (Main App Areas)
+
+- `src/pages/Index.tsx` - marketing/landing page
+- `src/pages/Auth.tsx` - authentication UI
+- `src/pages/Editor.tsx` - main writing app shell
+- `src/components/LexicalEditor.tsx` - editor composition
+- `src/components/AiFeedbackPanel.tsx` - AI persona feedback UI
+- `src/components/FloatingAiToolbar.tsx` - selection-based quick AI actions
+- `src/components/EmotionHeatmap.tsx` - emotion analysis view
+- `src/components/GhostReader.tsx` - engagement simulation view
+- `src/components/WhatIfBranching.tsx` - alternate rewrite generator
+- `src/components/StoryBible.tsx` - structured story extraction view
+- `supabase/functions/ai-analyze/index.ts` - server-side AI gateway and rate limiting
