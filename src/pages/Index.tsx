@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Sparkles, GitBranch, Eye, BookMarked, ArrowRight, PenLine, Brain, BarChart3, Download } from "lucide-react";
+import { BookOpen, Sparkles, GitBranch, Eye, BookMarked, ArrowRight, PenLine, Brain, BarChart3, Download, CheckCircle, MousePointerClick, Wand2, SpellCheck } from "lucide-react";
 
 const FEATURES = [
   {
