@@ -218,21 +218,24 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Beta highlights */}
       <section className="px-6 pb-28 bg-muted/40 py-20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Writers love ICHEN
+              Now in beta
             </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Everything you need to write your book — available today, free.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map(({ quote, name, role }) => (
-              <div key={name} className="bg-background rounded-xl border border-border p-6">
-                <p className="text-foreground text-sm leading-relaxed mb-5 italic">"{quote}"</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            {BETA_HIGHLIGHTS.map(({ label, detail }) => (
+              <div key={label} className="flex items-start gap-3 p-4 rounded-xl bg-background border border-border">
+                <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{name}</p>
-                  <p className="text-xs text-muted-foreground">{role}</p>
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground">{detail}</p>
                 </div>
               </div>
             ))}
@@ -247,13 +250,13 @@ const Index = () => {
             Ready to write your story?
           </h2>
           <p className="text-muted-foreground text-lg mb-10">
-            Join writers who choose ICHEN to craft with intention and clarity.
+            Join our beta and start writing with AI that respects your craft.
           </p>
           <Link
             to="/auth"
             className="group inline-flex items-center gap-2 px-10 py-4 bg-primary text-primary-foreground rounded-xl font-semibold text-lg hover:opacity-90 transition-all duration-200 shadow-lg shadow-primary/20"
           >
-            Start Writing Free
+            Join the Beta
             <ArrowRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
@@ -266,8 +269,12 @@ const Index = () => {
             <img src="/logo.png" alt="ICHEN" className="h-6 w-auto" />
             <span className="text-sm font-semibold text-foreground">ICHEN Manuscript</span>
           </div>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
+          </div>
           <p className="text-xs text-muted-foreground">
-            The AI editor that walks beside you.
+            © 2026 ICHEN Manuscript. All rights reserved.
           </p>
         </div>
       </footer>
