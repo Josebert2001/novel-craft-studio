@@ -35,22 +35,12 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "ICHEN doesn't write for me — it makes me write better. That's exactly what I needed.",
-    name: "Sarah K.",
-    role: "Fantasy novelist",
-  },
-  {
-    quote: "The Ghost Reader alone changed how I approach every scene. I finally see my own blind spots.",
-    name: "Marcus T.",
-    role: "Thriller writer",
-  },
-  {
-    quote: "Having an AI that suggests rather than dictates is a completely different experience.",
-    name: "Priya L.",
-    role: "Literary fiction author",
-  },
+const BETA_HIGHLIGHTS = [
+  { label: "AI Craft Coach", detail: "4 specialized editorial personas" },
+  { label: "Grammar Checking", detail: "Real-time Grammarly-style underlines" },
+  { label: "Writing Agent", detail: "Multi-tool AI assistant for deep analysis" },
+  { label: "Emotion Heatmap", detail: "Visualize your chapter's emotional arc" },
+  { label: "Cloud Sync", detail: "Auto-save to the cloud, write anywhere" },
 ];
 
 const Index = () => {
