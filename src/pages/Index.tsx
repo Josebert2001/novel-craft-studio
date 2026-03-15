@@ -189,7 +189,118 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features grid */}
+      {/* How It Works */}
+      <section className="px-6 pb-28">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              How ICHEN works
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Three steps. Zero learning curve. Your words, amplified.
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Connecting line */}
+            <div className="hidden md:block absolute left-1/2 top-12 bottom-12 w-px bg-border -translate-x-1/2" />
+
+            <div className="space-y-16 md:space-y-24">
+              {/* Step 1 */}
+              <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                <div className="mb-6 md:mb-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+                    Step 1
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-3">Write freely</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Open your book, pick a chapter, and start writing. The editor feels like a blank page — no clutter, no distractions. Markdown shortcuts, rich formatting, and auto-save keep you in the flow.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <PenLine className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Your writing canvas</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="h-2 w-full bg-muted rounded-full" />
+                    <div className="h-2 w-4/5 bg-muted rounded-full" />
+                    <div className="h-2 w-full bg-muted rounded-full" />
+                    <div className="h-2 w-3/5 bg-muted rounded-full" />
+                    <div className="mt-3 flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[11px] text-muted-foreground">Saved to cloud</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                <div className="order-2 mb-6 md:mb-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+                    Step 2
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-3">Highlight & ask</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Select any passage and your AI Craft Coach appears instantly. Choose a persona — Clarity Coach, Emotional Reader, Plot Hunter, or Style Polisher — and get targeted editorial feedback in seconds.
+                  </p>
+                </div>
+                <div className="order-1 rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MousePointerClick className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Select → Get feedback</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-2 w-full bg-muted rounded-full" />
+                    <div className="h-2 w-4/5 bg-primary/20 rounded-full ring-2 ring-primary/30" />
+                    <div className="h-2 w-full bg-muted rounded-full" />
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    {["💡 Clarity", "❤️ Emotion", "🔍 Plot", "✨ Style"].map((p) => (
+                      <span key={p} className="text-[10px] px-2 py-1 rounded-md bg-muted border border-border text-muted-foreground">{p}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                <div className="mb-6 md:mb-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+                    Step 3
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-3">Review & improve</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Grammar errors get wavy underlines — click to fix instantly. The Writing Agent analyzes your entire chapter. Emotion Heatmaps reveal your story's arc. You approve every change. Your voice stays yours.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Wand2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-foreground">AI-powered tools</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <SpellCheck className="h-3.5 w-3.5 text-destructive" />
+                      <span className="text-[11px] text-muted-foreground">Grammar: 2 issues found</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[11px] text-muted-foreground">Emotion arc: Joy → Tension → Resolution</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[11px] text-muted-foreground">Agent: "Your pacing drops in paragraph 4…"</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="px-6 pb-28">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
