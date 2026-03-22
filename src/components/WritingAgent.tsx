@@ -332,16 +332,22 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in group/msg`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 ${
+              className={`max-w-[85%] rounded-lg px-3 py-2 relative ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-foreground"
               }`}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === "agent" ? (
+                <div className="text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              )}
               {(msg.usedMemory || (msg.toolsUsed && msg.toolsUsed.length > 0)) && (
                 <div className="flex flex-wrap gap-1 mt-2 pt-1.5 border-t border-border/30">
                   {msg.usedMemory && (
@@ -359,7 +365,22 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
                   ))}
                 </div>
               )}
-              <p className="text-[10px] mt-1 opacity-50">{formatTime(msg.timestamp)}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] opacity-50">{formatTime(msg.timestamp)}</p>
+                {msg.role === "agent" && (
+                  <button
+                    onClick={() => handleCopyMessage(msg)}
+                    className="p-0.5 rounded opacity-0 group-hover/msg:opacity-60 hover:!opacity-100 transition-opacity text-muted-foreground"
+                    title="Copy response"
+                  >
+                    {copiedId === msg.id ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
