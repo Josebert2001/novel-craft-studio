@@ -25,6 +25,9 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
     "generate_branches",
     "critique_prose",
     "check_consistency",
+    "analyze_pacing",
+    "summarize_chapter",
+    "analyze_dialogue",
   ],
   contextWindow: "full",
 };
@@ -36,6 +39,9 @@ const ALL_TOOLS = [
   { id: "critique_prose", label: "Prose Critique" },
   { id: "check_consistency", label: "Consistency Check" },
   { id: "generate_branches", label: "Branch Generation" },
+  { id: "analyze_pacing", label: "Pacing Analysis" },
+  { id: "summarize_chapter", label: "Chapter Summary" },
+  { id: "analyze_dialogue", label: "Dialogue Analysis" },
 ];
 
 const loadSettings = (): AgentSettings => {
