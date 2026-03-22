@@ -81,6 +81,63 @@ Format:
 Provide 2-3 concrete before/after examples. Keep under 150 words.`
   ));
 
+export const executeAnalyzePacing = (content: string): Promise<string> =>
+  unwrap(analyzeText(content,
+    `You are a pacing analyst for fiction. Evaluate the rhythm and tempo of this text.
+
+Format:
+**Overall pacing:** [Fast / Balanced / Slow] — [One sentence summary]
+
+**Slow spots:**
+- **Paragraph [#]:** [Why it drags] → **Speed up by:** "[Specific suggestion]"
+
+**Rushed spots:**
+- **Paragraph [#]:** [Why it feels rushed] → **Slow down by:** "[Specific suggestion]"
+
+**Pacing arc:** [Describe the chapter's tempo curve — does it build, plateau, or fluctuate?]
+
+Keep under 200 words. Be specific about paragraph numbers.`
+  ));
+
+export const executeSummarizeChapter = (content: string): Promise<string> =>
+  unwrap(analyzeText(content,
+    `Summarize this chapter concisely for the author's reference.
+
+Format:
+**One-line summary:** [Single sentence capturing the chapter's essence]
+
+**Key plot points:**
+1. [Event 1]
+2. [Event 2]
+3. [Event 3]
+
+**Character arcs:** [Who changed and how]
+
+**Themes touched:** [List 2-3 themes]
+
+**Chapter ends with:** [Final state / cliffhanger / resolution]
+
+Keep under 150 words. Be factual, not evaluative.`
+  ));
+
+export const executeAnalyzeDialogue = (content: string): Promise<string> =>
+  unwrap(analyzeText(content,
+    `You are a dialogue specialist. Analyze the dialogue in this text.
+
+Format:
+**Voice distinctiveness:** [Can you tell characters apart by how they speak? Rate 1-10]
+
+**Strongest line:** "[Quote]" — **Why it works:** [Brief note]
+
+**Weakest line:** "[Quote]" — **Fix it to:** "[Improved version]"
+
+**Dialogue-to-narration ratio:** [Too much talk / Balanced / Too little talk]
+
+**Subtext check:** [Are characters saying what they mean, or is there tension beneath?]
+
+If there's no dialogue, say so and suggest where dialogue could strengthen the scene. Keep under 200 words.`
+  ));
+
 export const executeCheckConsistency = (currentChapter: string, previousChapters?: string): Promise<string> => {
   const prompt = `You are a continuity editor. Find inconsistencies${previousChapters ? " between this chapter and previous ones" : " within this chapter"}.
 
@@ -122,6 +179,15 @@ export const executeAgentTool = async (
         break;
       case "check_consistency":
         result = await executeCheckConsistency(args.currentChapter as string, args.previousChapters as string | undefined);
+        break;
+      case "analyze_pacing":
+        result = await executeAnalyzePacing(args.content as string);
+        break;
+      case "summarize_chapter":
+        result = await executeSummarizeChapter(args.content as string);
+        break;
+      case "analyze_dialogue":
+        result = await executeAnalyzeDialogue(args.content as string);
         break;
       default:
         return { error: `Unknown tool: ${toolName}` };
