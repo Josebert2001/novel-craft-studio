@@ -43,6 +43,15 @@ const selectTools = (message: string): string[] => {
   if (lower.includes("branch") || lower.includes("alternate") || lower.includes("version")) {
     tools.push("generate_branches");
   }
+  if (lower.includes("pacing") || lower.includes("pace") || lower.includes("rhythm") || lower.includes("slow") || lower.includes("rush")) {
+    tools.push("analyze_pacing");
+  }
+  if (lower.includes("summar") || lower.includes("recap") || lower.includes("overview")) {
+    tools.push("summarize_chapter");
+  }
+  if (lower.includes("dialogue") || lower.includes("dialog") || lower.includes("conversation") || lower.includes("speech")) {
+    tools.push("analyze_dialogue");
+  }
 
   // Broad requests → multi-tool
   if (

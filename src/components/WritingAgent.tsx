@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Bot, Trash2, Download } from "lucide-react";
+import { Send, Loader2, Bot, Trash2, Download, Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { runAgentLoop, type ToolExecution, type AgentLoopSettings } from "@/lib/agentLoop";
 import AgentSettingsDialog, { useAgentSettings } from "@/components/AgentSettings";
 
@@ -212,16 +213,28 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
     setShowStalePrompt(false);
   };
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyMessage = (msg: Message) => {
+    navigator.clipboard.writeText(msg.content);
+    setCopiedId(msg.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const quickActions = selectedText
     ? [
         { label: "Rewrite this", prompt: `Rewrite this passage in different ways: "${selectedText.slice(0, 300)}"` },
         { label: "What's wrong?", prompt: `What's wrong with this passage and how do I fix it: "${selectedText.slice(0, 300)}"` },
         { label: "Make stronger", prompt: `How can I make this more impactful: "${selectedText.slice(0, 300)}"` },
+        { label: "Fix dialogue", prompt: `Analyze the dialogue in this passage and improve it: "${selectedText.slice(0, 300)}"` },
       ]
     : [
         { label: "Analyze chapter", prompt: "Analyze my chapter for plot, emotion, and pacing" },
         { label: "Check consistency", prompt: "Check this chapter for any plot holes or inconsistencies" },
         { label: "Improve prose", prompt: "Help me improve the prose quality of this chapter" },
+        { label: "Pacing check", prompt: "Analyze the pacing of this chapter — what's too slow or too rushed?" },
+        { label: "Summarize", prompt: "Give me a concise summary of this chapter" },
+        { label: "Dialogue review", prompt: "Analyze the dialogue quality in this chapter" },
       ];
 
   const formatTime = (ts: number) => {
@@ -319,16 +332,22 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in group/msg`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 ${
+              className={`max-w-[85%] rounded-lg px-3 py-2 relative ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-foreground"
               }`}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === "agent" ? (
+                <div className="text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              )}
               {(msg.usedMemory || (msg.toolsUsed && msg.toolsUsed.length > 0)) && (
                 <div className="flex flex-wrap gap-1 mt-2 pt-1.5 border-t border-border/30">
                   {msg.usedMemory && (
@@ -346,7 +365,22 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
                   ))}
                 </div>
               )}
-              <p className="text-[10px] mt-1 opacity-50">{formatTime(msg.timestamp)}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] opacity-50">{formatTime(msg.timestamp)}</p>
+                {msg.role === "agent" && (
+                  <button
+                    onClick={() => handleCopyMessage(msg)}
+                    className="p-0.5 rounded opacity-0 group-hover/msg:opacity-60 hover:!opacity-100 transition-opacity text-muted-foreground"
+                    title="Copy response"
+                  >
+                    {copiedId === msg.id ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
