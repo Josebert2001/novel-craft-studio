@@ -89,5 +89,47 @@ export const AGENT_TOOLS: AgentTool[] = [
       },
       required: ["content"]
     }
+  },
+  {
+    name: "analyze_pacing",
+    description: "Analyze the pacing and rhythm of the chapter. Identifies slow sections, rushed moments, and suggests pacing improvements.",
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "The chapter text to analyze"
+        }
+      },
+      required: ["content"]
+    }
+  },
+  {
+    name: "summarize_chapter",
+    description: "Generate a concise summary of the chapter including key plot points, character arcs, and themes.",
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "The chapter text to summarize"
+        }
+      },
+      required: ["content"]
+    }
+  },
+  {
+    name: "analyze_dialogue",
+    description: "Analyze dialogue quality — voice distinctiveness, natural flow, subtext, and pacing between dialogue and narration.",
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "The text containing dialogue to analyze"
+        }
+      },
+      required: ["content"]
+    }
   }
 ];

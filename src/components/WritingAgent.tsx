@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Bot, Trash2, Download } from "lucide-react";
+import { Send, Loader2, Bot, Trash2, Download, Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { runAgentLoop, type ToolExecution, type AgentLoopSettings } from "@/lib/agentLoop";
 import AgentSettingsDialog, { useAgentSettings } from "@/components/AgentSettings";
 
