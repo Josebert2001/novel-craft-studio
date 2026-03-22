@@ -213,16 +213,28 @@ export default function WritingAgent({ chapterContent, chapterId, chapterTitle, 
     setShowStalePrompt(false);
   };
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyMessage = (msg: Message) => {
+    navigator.clipboard.writeText(msg.content);
+    setCopiedId(msg.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const quickActions = selectedText
     ? [
         { label: "Rewrite this", prompt: `Rewrite this passage in different ways: "${selectedText.slice(0, 300)}"` },
         { label: "What's wrong?", prompt: `What's wrong with this passage and how do I fix it: "${selectedText.slice(0, 300)}"` },
         { label: "Make stronger", prompt: `How can I make this more impactful: "${selectedText.slice(0, 300)}"` },
+        { label: "Fix dialogue", prompt: `Analyze the dialogue in this passage and improve it: "${selectedText.slice(0, 300)}"` },
       ]
     : [
         { label: "Analyze chapter", prompt: "Analyze my chapter for plot, emotion, and pacing" },
         { label: "Check consistency", prompt: "Check this chapter for any plot holes or inconsistencies" },
         { label: "Improve prose", prompt: "Help me improve the prose quality of this chapter" },
+        { label: "Pacing check", prompt: "Analyze the pacing of this chapter — what's too slow or too rushed?" },
+        { label: "Summarize", prompt: "Give me a concise summary of this chapter" },
+        { label: "Dialogue review", prompt: "Analyze the dialogue quality in this chapter" },
       ];
 
   const formatTime = (ts: number) => {
