@@ -125,11 +125,39 @@ const Editor = () => {
     const stored = localStorage.getItem("ichen_ai_usage");
     if (stored) {
       const data = JSON.parse(stored);
-      if (data.date !== new Date().toDateString()) return 0;
+      const windowStart = data.windowStart ? new Date(data.windowStart).getTime() : 0;
+      const hoursSince = (Date.now() - windowStart) / (1000 * 60 * 60);
+      if (hoursSince >= 24) return 0;
       return data.count || 0;
     }
     return 0;
   });
+
+  // AI reset countdown
+  const [aiResetCountdown, setAiResetCountdown] = useState<string>("");
+  useEffect(() => {
+    const tick = () => {
+      const stored = localStorage.getItem("ichen_ai_usage");
+      if (!stored) { setAiResetCountdown(""); return; }
+      const data = JSON.parse(stored);
+      if (!data.windowStart || (data.count || 0) === 0) { setAiResetCountdown(""); return; }
+      const resetTime = new Date(data.windowStart).getTime() + 24 * 60 * 60 * 1000;
+      const remaining = resetTime - Date.now();
+      if (remaining <= 0) {
+        setTotalAiRequests(0);
+        localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: 0, windowStart: null }));
+        setAiResetCountdown("");
+        return;
+      }
+      const h = Math.floor(remaining / (1000 * 60 * 60));
+      const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((remaining % (1000 * 60)) / 1000);
+      setAiResetCountdown(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [totalAiRequests]);
 
   // Feedback history
   const [feedbackHistory, setFeedbackHistory] = useState<FeedbackRecord[]>(() => {
