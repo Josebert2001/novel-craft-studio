@@ -1280,11 +1280,24 @@ const Editor = () => {
                         style={{ width: `${Math.min((totalAiRequests / 10) * 100, 100)}%` }}
                       />
                     </div>
-                    {totalAiRequests >= 10 && (
-                      <p className="text-xs text-destructive mt-1">Daily limit reached. Upgrade for more.</p>
+                    {totalAiRequests >= 10 && aiResetCountdown && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                        <p className="text-xs text-destructive">
+                          Resets in <span className="font-mono font-semibold">{aiResetCountdown}</span>
+                        </p>
+                      </div>
+                    )}
+                    {totalAiRequests >= 10 && !aiResetCountdown && (
+                      <p className="text-xs text-destructive mt-1">Daily limit reached.</p>
                     )}
                     {totalAiRequests >= 8 && totalAiRequests < 10 && (
                       <p className="text-xs text-amber-600 mt-1">{10 - totalAiRequests} analyses remaining today</p>
+                    )}
+                    {totalAiRequests > 0 && totalAiRequests < 8 && aiResetCountdown && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Resets in <span className="font-mono">{aiResetCountdown}</span>
+                      </p>
                     )}
                   </div>
                 </div>
