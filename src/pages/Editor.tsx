@@ -125,11 +125,39 @@ const Editor = () => {
     const stored = localStorage.getItem("ichen_ai_usage");
     if (stored) {
       const data = JSON.parse(stored);
-      if (data.date !== new Date().toDateString()) return 0;
+      const windowStart = data.windowStart ? new Date(data.windowStart).getTime() : 0;
+      const hoursSince = (Date.now() - windowStart) / (1000 * 60 * 60);
+      if (hoursSince >= 24) return 0;
       return data.count || 0;
     }
     return 0;
   });
+
+  // AI reset countdown
+  const [aiResetCountdown, setAiResetCountdown] = useState<string>("");
+  useEffect(() => {
+    const tick = () => {
+      const stored = localStorage.getItem("ichen_ai_usage");
+      if (!stored) { setAiResetCountdown(""); return; }
+      const data = JSON.parse(stored);
+      if (!data.windowStart || (data.count || 0) === 0) { setAiResetCountdown(""); return; }
+      const resetTime = new Date(data.windowStart).getTime() + 24 * 60 * 60 * 1000;
+      const remaining = resetTime - Date.now();
+      if (remaining <= 0) {
+        setTotalAiRequests(0);
+        localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: 0, windowStart: null }));
+        setAiResetCountdown("");
+        return;
+      }
+      const h = Math.floor(remaining / (1000 * 60 * 60));
+      const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((remaining % (1000 * 60)) / 1000);
+      setAiResetCountdown(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [totalAiRequests]);
 
   // Feedback history
   const [feedbackHistory, setFeedbackHistory] = useState<FeedbackRecord[]>(() => {
@@ -669,9 +697,17 @@ const Editor = () => {
 
   // ─── AI usage helpers ───
   const incrementAiUsage = () => {
-    const newCount = totalAiRequests + 1;
+    const stored = localStorage.getItem("ichen_ai_usage");
+    const data = stored ? JSON.parse(stored) : {};
+    const windowStart = data.windowStart ? new Date(data.windowStart).getTime() : 0;
+    const hoursSince = (Date.now() - windowStart) / (1000 * 60 * 60);
+    const isNewWindow = !data.windowStart || hoursSince >= 24;
+    const newCount = isNewWindow ? 1 : (data.count || 0) + 1;
     setTotalAiRequests(newCount);
-    localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: newCount, date: new Date().toDateString() }));
+    localStorage.setItem("ichen_ai_usage", JSON.stringify({
+      count: newCount,
+      windowStart: isNewWindow ? new Date().toISOString() : data.windowStart,
+    }));
   };
 
   const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedbackText: string) => {
@@ -1244,11 +1280,24 @@ const Editor = () => {
                         style={{ width: `${Math.min((totalAiRequests / 10) * 100, 100)}%` }}
                       />
                     </div>
-                    {totalAiRequests >= 10 && (
-                      <p className="text-xs text-destructive mt-1">Daily limit reached. Upgrade for more.</p>
+                    {totalAiRequests >= 10 && aiResetCountdown && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                        <p className="text-xs text-destructive">
+                          Resets in <span className="font-mono font-semibold">{aiResetCountdown}</span>
+                        </p>
+                      </div>
+                    )}
+                    {totalAiRequests >= 10 && !aiResetCountdown && (
+                      <p className="text-xs text-destructive mt-1">Daily limit reached.</p>
                     )}
                     {totalAiRequests >= 8 && totalAiRequests < 10 && (
                       <p className="text-xs text-amber-600 mt-1">{10 - totalAiRequests} analyses remaining today</p>
+                    )}
+                    {totalAiRequests > 0 && totalAiRequests < 8 && aiResetCountdown && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Resets in <span className="font-mono">{aiResetCountdown}</span>
+                      </p>
                     )}
                   </div>
                 </div>
