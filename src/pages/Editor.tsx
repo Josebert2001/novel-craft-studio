@@ -697,9 +697,17 @@ const Editor = () => {
 
   // ─── AI usage helpers ───
   const incrementAiUsage = () => {
-    const newCount = totalAiRequests + 1;
+    const stored = localStorage.getItem("ichen_ai_usage");
+    const data = stored ? JSON.parse(stored) : {};
+    const windowStart = data.windowStart ? new Date(data.windowStart).getTime() : 0;
+    const hoursSince = (Date.now() - windowStart) / (1000 * 60 * 60);
+    const isNewWindow = !data.windowStart || hoursSince >= 24;
+    const newCount = isNewWindow ? 1 : (data.count || 0) + 1;
     setTotalAiRequests(newCount);
-    localStorage.setItem("ichen_ai_usage", JSON.stringify({ count: newCount, date: new Date().toDateString() }));
+    localStorage.setItem("ichen_ai_usage", JSON.stringify({
+      count: newCount,
+      windowStart: isNewWindow ? new Date().toISOString() : data.windowStart,
+    }));
   };
 
   const addFeedbackToHistory = (persona: string, selectedTextStr: string, feedbackText: string) => {
