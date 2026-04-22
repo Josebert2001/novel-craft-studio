@@ -137,18 +137,14 @@ Current chapter content is provided below. Use this context when analyzing.`;
         toolsToUse.push(settings.enabledTools[0]);
       }
     }
-    console.log("[AgentLoop] Selected tools:", toolsToUse);
-
     const toolResults: Record<string, string> = {};
 
     for (const toolName of toolsToUse) {
       iterations++;
       if (iterations > maxIterations) {
-        console.log("[AgentLoop] Max iterations reached, stopping.");
         break;
       }
 
-      console.log(`[AgentLoop] Executing tool: ${toolName}`);
       onToolUpdate?.({ toolName, status: "running" });
       toolsUsed.push(toolName);
 
@@ -170,7 +166,6 @@ Current chapter content is provided below. Use this context when analyzing.`;
         continue;
       }
 
-      console.log(`[AgentLoop] Tool ${toolName} complete.`);
       toolResults[toolName] = result || "";
       onToolUpdate?.({ toolName, status: "complete", result });
     }
@@ -193,7 +188,6 @@ Current chapter content is provided below. Use this context when analyzing.`;
     const systemInstruction = `${systemPrompt}\n\nKeep response under ${maxWords} words.`;
     const userContent = `CHAPTER CONTENT:\n${contentToAnalyze}${conversationContext}\n\n---\n\nUser question: ${userMessage}\n\nTool Results:\n${toolResultsStr}\n\nBased on these tool results and the conversation context, provide a clear, actionable response to the user's question. Synthesize the findings and explain what matters most.`;
 
-    console.log("[AgentLoop] Synthesizing results...");
     const synthesisResult = await analyzeText(userContent, systemInstruction);
 
     return {

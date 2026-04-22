@@ -44,6 +44,7 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          is_complete: boolean
           sort_order: number | null
           title: string
           updated_at: string
@@ -55,6 +56,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_complete?: boolean
           sort_order?: number | null
           title?: string
           updated_at?: string
@@ -66,6 +68,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_complete?: boolean
           sort_order?: number | null
           title?: string
           updated_at?: string

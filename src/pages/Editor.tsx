@@ -178,10 +178,17 @@ const Editor = () => {
       if (text.length <= 10) return;
 
       setIsCheckingGrammar(true);
-      checkGrammar(text).then((issues) => {
-        setGrammarIssues(issues);
-        setIsCheckingGrammar(false);
-      });
+      checkGrammar(text)
+        .then((issues) => {
+          setGrammarIssues(issues);
+        })
+        .catch((err) => {
+          console.error("Grammar check failed:", err);
+          setGrammarIssues([]);
+        })
+        .finally(() => {
+          setIsCheckingGrammar(false);
+        });
     });
   }, [currentChapterId]);
 
@@ -285,7 +292,7 @@ const Editor = () => {
             title: ch.title,
             wordCount: ch.word_count ?? 0,
             content: ch.content ?? "",
-            isComplete: false,
+            isComplete: ch.is_complete ?? false,
           }));
           if (isMountedRef.current) {
             setChapters(mapped);
@@ -629,9 +636,22 @@ const Editor = () => {
   // ─── Chapter completion toggle ───
   const handleToggleComplete = async (e: React.MouseEvent, chapterId: string) => {
     e.stopPropagation();
-    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, isComplete: !ch.isComplete } : ch)));
-    // Note: chapters table doesn't have is_complete column yet, so we persist locally
-    // TODO: Add is_complete column to chapters table
+    const chapter = chapters.find((ch) => ch.id === chapterId);
+    if (!chapter) return;
+    const nextIsComplete = !chapter.isComplete;
+    setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, isComplete: nextIsComplete } : ch)));
+    if (user) {
+      try {
+        await supabase
+          .from("chapters")
+          .update({ is_complete: nextIsComplete })
+          .eq("id", chapterId)
+          .eq("user_id", user.id);
+      } catch (err) {
+        console.error("Failed to update chapter completion:", err);
+        setChapters((prev) => prev.map((ch) => (ch.id === chapterId ? { ...ch, isComplete: !nextIsComplete } : ch)));
+      }
+    }
   };
 
   // ─── Drag-and-drop reordering ───

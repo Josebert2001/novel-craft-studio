@@ -1,13 +1,8 @@
 import { useLocation, Link } from "react-router-dom";
-import { useEffect } from "react";
 import { BookOpen, Home, ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
-
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">

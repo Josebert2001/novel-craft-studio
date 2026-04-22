@@ -1,0 +1,2 @@
+ALTER TABLE public.chapters
+ADD COLUMN IF NOT EXISTS is_complete BOOLEAN NOT NULL DEFAULT false;

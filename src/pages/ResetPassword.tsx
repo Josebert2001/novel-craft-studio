@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
-const PASSWORD_MIN = 6;
+const PASSWORD_MIN = 12;
 
 const ResetPassword = () => {
   const navigate = useNavigate();

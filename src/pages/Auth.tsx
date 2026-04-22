@@ -10,7 +10,7 @@ const applyDarkMode = () => {
   if (stored === "true") document.documentElement.classList.add("dark");
 };
 
-const PASSWORD_MIN = 6;
+const PASSWORD_MIN = 12;
 
 const getPasswordStrength = (pw: string): { score: number; label: string; color: string } => {
   if (pw.length === 0) return { score: 0, label: "", color: "" };
@@ -66,7 +66,7 @@ const Auth = () => {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < PASSWORD_MIN) {
+    if (mode === "signup" && password.length < PASSWORD_MIN) {
       setError(`Password must be at least ${PASSWORD_MIN} characters.`);
       return;
     }
@@ -224,7 +224,7 @@ const Auth = () => {
                     type={showPassword ? "text" : "password"}
                     required
                     autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    minLength={PASSWORD_MIN}
+                    minLength={mode === "signup" ? PASSWORD_MIN : undefined}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
